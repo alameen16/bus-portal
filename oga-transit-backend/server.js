@@ -35,7 +35,7 @@ app.use(cors({
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:3000",
-    "https://bus-portal-rho.vercel.app/"
+    "https://bus-portal-rho.vercel.app"  // your real URL
   ],
   credentials: true,
 }));
