@@ -22,7 +22,7 @@ import staffRoutes   from "./routes/staff.js";
 
 // Create the Express app
 const app  = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 /* ─────────────────────────────────────────────
    MIDDLEWARE
@@ -31,7 +31,12 @@ const PORT = 5000;
 
 // Allow requests from the React frontend (localhost:5173)
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "https://your-app.vercel.app"
+  ],
   credentials: true,
 }));
 
