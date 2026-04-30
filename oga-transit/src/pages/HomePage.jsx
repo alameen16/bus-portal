@@ -8,7 +8,7 @@ const QUICK_ACTIONS = [
   {
     label: "View Schedules",
     description: "Browse all available routes and departure times.",
-    icon: "/public/map.svg",
+    icon: "/map.svg",
     page: "AllRoutes",
     color: "bg-green-50 border-green-200 hover:border-green-500",
     iconBg: "bg-green-100",
@@ -16,7 +16,7 @@ const QUICK_ACTIONS = [
   {
     label: "New Booking",
     description: "Reserve your seat on today's staff shuttle.",
-    icon: "/public/bus.svg",
+    icon: "/bus.svg",
     page: "Bookings",
     color: "bg-stone-50 border-stone-200 hover:border-green-500",
     iconBg: "bg-stone-100",
@@ -24,7 +24,7 @@ const QUICK_ACTIONS = [
   {
     label: "My Bookings",
     description: "View, edit or cancel your existing bookings.",
-    icon: "/public/notepad-text.svg",
+    icon: "/notepad-text.svg",
     page: "MyBookings",
     color: "bg-stone-50 border-stone-200 hover:border-green-500",
     iconBg: "bg-stone-100",
@@ -32,7 +32,7 @@ const QUICK_ACTIONS = [
   {
     label: "Support",
     description: "Access help resources and raise an issue.",
-    icon: "/public/customer.svg",
+    icon: "/customer.svg",
     page: "Support",
     color: "bg-stone-50 border-stone-200 hover:border-green-500",
     iconBg: "bg-stone-100",

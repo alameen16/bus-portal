@@ -15,11 +15,11 @@ import { useAuth } from "../../context/AuthContext";
 
 // All sidebar navigation links with role restrictions
 const SIDEBAR_LINKS = [
-  { page: "AdminStaff",    label: "Staff Management", icon: "/public/user-round.svg",  roles: ["superadmin"] },
-  { page: "AdminRoutes",   label: "Routes",           icon: "/public/map.svg",      roles: ["superadmin", "localAdmin"] },
-  { page: "AdminBuses",    label: "Fleet / Buses",    icon: "/public/bus.svg",         roles: ["superadmin", "localAdmin"] },
-  { page: "AdminDrivers",  label: "Drivers",          icon: "/public/steering.png",      roles: ["superadmin", "localAdmin"] },
-  { page: "AdminBookings", label: "Bookings",         icon: "/public/notepad-text.svg",     roles: ["superadmin", "localAdmin"] },
+  { page: "AdminStaff",    label: "Staff Management", icon: "/user-round.svg",  roles: ["superadmin"] },
+  { page: "AdminRoutes",   label: "Routes",           icon: "/map.svg",      roles: ["superadmin", "localAdmin"] },
+  { page: "AdminBuses",    label: "Fleet / Buses",    icon: "/bus.svg",         roles: ["superadmin", "localAdmin"] },
+  { page: "AdminDrivers",  label: "Drivers",          icon: "/steering.png",      roles: ["superadmin", "localAdmin"] },
+  { page: "AdminBookings", label: "Bookings",         icon: "/notepad-text.svg",     roles: ["superadmin", "localAdmin"] },
 ];
 
 export default function AdminLayout({ currentPage, setCurrentPage, children }) {
