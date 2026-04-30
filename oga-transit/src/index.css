@@ -1,0 +1,14 @@
+/* 
+  index.css — Global Styles
+  
+  These three lines load Tailwind CSS into your project.
+  - @tailwind base      → resets browser defaults (like margins, paddings)
+  - @tailwind components → loads reusable component classes
+  - @tailwind utilities  → loads all the utility classes (flex, p-4, text-sm, etc.)
+  
+  VS Code may show warnings on these lines — that's fine!
+  Install the "Tailwind CSS IntelliSense" extension to fix it.
+*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

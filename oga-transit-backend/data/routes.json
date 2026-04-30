@@ -1,0 +1,46 @@
+[
+  {
+    "id": "rt-005",
+    "from": "Lekki",
+    "to": "Berger",
+    "fromTerminal": "Lekki Phase 1 Terminal",
+    "toTerminal": "Berger Bus Stop Terminal",
+    "price": 0,
+    "duration": "1h 30m",
+    "departures": [
+      "16:00"
+    ],
+    "status": "active",
+    "busId": "bus-004",
+    "driverId": "drv-b15b01",
+    "distance": "35km",
+    "stops": [
+      "Ajah",
+      "Lekki-Epe Expressway",
+      "Ojodu"
+    ],
+    "createdAt": "2026-04-29T12:11:13.688463"
+  },
+  {
+    "id": "rt-006",
+    "from": "Victoria Island",
+    "to": "Kola",
+    "fromTerminal": "VI (Ozumba Mbadiwe) Terminal",
+    "toTerminal": "Kola Bus Stop Terminal",
+    "price": 0,
+    "duration": "1h 00m",
+    "departures": [
+      "16:00"
+    ],
+    "status": "active",
+    "busId": "bus-001",
+    "driverId": "drv-m77n88",
+    "distance": "22km",
+    "stops": [
+      "Eko Hotel Junction",
+      "CMS",
+      "Lagos Island"
+    ],
+    "createdAt": "2026-04-29T12:11:13.688479"
+  }
+]

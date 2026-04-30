@@ -1,0 +1,235 @@
+[
+  {
+    "id": "bus-005",
+    "plateNumber": "OGA-9922-LG",
+    "model": "Scania Touring HD",
+    "capacity": 55,
+    "year": 2024,
+    "status": "active",
+    "assignedRouteId": "rt-008",
+    "assignedDriverId": "drv-c22d05",
+    "lastMaintenance": "2025-01-20",
+    "nextMaintenance": "2025-04-20",
+    "amenities": [
+      "WiFi",
+      "AC",
+      "USB Ports",
+      "Reclining Seats",
+      "Restroom",
+      "Coffee Machine"
+    ],
+    "color": "Green/White",
+    "createdAt": "2024-01-05T00:00:00.000Z"
+  },
+  {
+    "id": "bus-006",
+    "plateNumber": "OGA-7711-AB",
+    "model": "Toyota Coaster Deluxe",
+    "capacity": 30,
+    "year": 2023,
+    "status": "active",
+    "assignedRouteId": null,
+    "assignedDriverId": null,
+    "lastMaintenance": "2026-04-10",
+    "nextMaintenance": "2026-07-10",
+    "amenities": [
+      "AC",
+      "USB Ports",
+      "Entertainment Screen"
+    ],
+    "color": "Green/White",
+    "createdAt": "2024-01-06T00:00:00.000Z"
+  },
+  {
+    "id": "bus-007",
+    "plateNumber": "OGA-1188-LG",
+    "model": "Volvo B11R",
+    "capacity": 60,
+    "year": 2025,
+    "status": "active",
+    "assignedRouteId": "rt-006",
+    "assignedDriverId": "drv-k11l34",
+    "lastMaintenance": "2026-02-15",
+    "nextMaintenance": "2026-05-15",
+    "amenities": [
+      "WiFi",
+      "AC",
+      "Personal Screens",
+      "Leg Rests",
+      "USB Ports"
+    ],
+    "color": "Green/White",
+    "createdAt": "2024-01-10T00:00:00.000Z"
+  },
+  {
+    "id": "bus-008",
+    "plateNumber": "OGA-2244-OY",
+    "model": "Toyota Hiace High-Roof",
+    "capacity": 14,
+    "year": 2022,
+    "status": "active",
+    "assignedRouteId": "rt-009",
+    "assignedDriverId": "drv-n44o67",
+    "lastMaintenance": "2025-11-20",
+    "nextMaintenance": "2026-02-20",
+    "amenities": [
+      "AC",
+      "Reading Lights"
+    ],
+    "color": "Green/White",
+    "createdAt": "2024-02-01T00:00:00.000Z"
+  },
+  {
+    "id": "bus-009",
+    "plateNumber": "OGA-6633-LG",
+    "model": "Mercedes Sprinter Executive",
+    "capacity": 45,
+    "year": 2024,
+    "status": "active",
+    "assignedRouteId": "rt-010",
+    "assignedDriverId": "drv-h88i12",
+    "lastMaintenance": "2026-03-01",
+    "nextMaintenance": "2026-06-01",
+    "amenities": [
+      "WiFi",
+      "AC",
+      "USB Ports",
+      "Reclining Seats"
+    ],
+    "color": "Green/White",
+    "createdAt": "2024-02-15T00:00:00.000Z"
+  },
+  {
+    "id": "bus-010",
+    "plateNumber": "OGA-5050-LG",
+    "model": "MCI J4500",
+    "capacity": 56,
+    "year": 2023,
+    "status": "active",
+    "assignedRouteId": "rt-913988",
+    "assignedDriverId": "drv-e55f09",
+    "lastMaintenance": "2025-12-10",
+    "nextMaintenance": "2026-03-10",
+    "amenities": [
+      "WiFi",
+      "AC",
+      "Restroom",
+      "Power Outlets"
+    ],
+    "color": "Green/White",
+    "createdAt": "2024-03-01T00:00:00.000Z"
+  },
+  {
+    "id": "bus-88c2fe",
+    "plateNumber": "OGA-1020-LG",
+    "model": "Toyota Quantum",
+    "capacity": 15,
+    "year": 2026,
+    "status": "active",
+    "assignedRouteId": "rt-007",
+    "assignedDriverId": "drv-t11u22",
+    "lastMaintenance": null,
+    "nextMaintenance": "2026-08-24",
+    "amenities": [
+      "AC",
+      "Bluetooth Audio",
+      "USB Ports"
+    ],
+    "color": "Green/White",
+    "createdAt": "2026-04-24T14:30:00.000Z"
+  },
+  {
+    "id": "bus-001",
+    "plateNumber": "OGA-4421-LG",
+    "model": "Mercedes Sprinter Executive",
+    "capacity": 45,
+    "year": 2022,
+    "status": "active",
+    "assignedRouteId": "rt-006",
+    "assignedDriverId": "drv-m77n88",
+    "lastMaintenance": "2024-11-01",
+    "nextMaintenance": "2025-02-01",
+    "amenities": [
+      "WiFi",
+      "AC",
+      "USB Ports",
+      "Reclining Seats"
+    ],
+    "color": "Green/White",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "bus-002",
+    "plateNumber": "OGA-3300-LG",
+    "model": "Toyota Coaster",
+    "capacity": 30,
+    "year": 2021,
+    "status": "active",
+    "assignedRouteId": "rt-002",
+    "assignedDriverId": "drv-x55y66",
+    "lastMaintenance": "2024-10-15",
+    "nextMaintenance": "2025-01-15",
+    "amenities": [
+      "AC",
+      "USB Ports"
+    ],
+    "color": "Green/White",
+    "createdAt": "2024-01-02T00:00:00.000Z"
+  },
+  {
+    "id": "bus-003",
+    "plateNumber": "OGA-1812-AB",
+    "model": "Sienna Executive Coach",
+    "capacity": 18,
+    "year": 2023,
+    "status": "active",
+    "assignedRouteId": "rt-003",
+    "assignedDriverId": "drv-g33h44",
+    "lastMaintenance": "2024-12-01",
+    "nextMaintenance": "2025-03-01",
+    "amenities": [
+      "WiFi",
+      "AC",
+      "USB Ports",
+      "Entertainment Screen"
+    ],
+    "color": "Green/White",
+    "createdAt": "2024-01-03T00:00:00.000Z"
+  },
+  {
+    "id": "bus-004",
+    "plateNumber": "OGA-5500-LG",
+    "model": "Mercedes Sprinter Standard",
+    "capacity": 45,
+    "year": 2020,
+    "status": "active",
+    "assignedRouteId": "rt-005",
+    "assignedDriverId": "drv-b15b01",
+    "lastMaintenance": "2025-01-10",
+    "nextMaintenance": "2025-04-10",
+    "amenities": [
+      "AC"
+    ],
+    "color": "Green/White",
+    "createdAt": "2024-01-04T00:00:00.000Z"
+  },
+  {
+    "id": "bus-129bbe",
+    "plateNumber": "OGA-4400-LG",
+    "model": "Toyota Hiace",
+    "capacity": 18,
+    "year": 2026,
+    "status": "active",
+    "assignedRouteId": "rt-28335f",
+    "assignedDriverId": "drv-q77r90",
+    "lastMaintenance": null,
+    "nextMaintenance": null,
+    "amenities": [
+      "Wi-Fi",
+      "Ac",
+      "USB ports"
+    ],
+    "color": "Green/White",
+    "createdAt": "2026-04-24T12:06:04.855Z"
+  }
+]

@@ -1,0 +1,57 @@
+<svg width="680" height="175" viewBox="0 0 680 175" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Oga Transit Logo — Dark</title>
+
+  <style>
+    .bg-card { fill: #0a1f0e; }
+    .logo-text-main { font-family: Georgia, 'Times New Roman', serif; font-weight: 700; fill: #ffffff; }
+    .logo-text-sub { font-family: Arial, sans-serif; font-weight: 400; letter-spacing: 0.28em; fill: #a3c98b; }
+    .tagline { font-family: Arial, sans-serif; font-weight: 400; letter-spacing: 0.18em; fill: #6b9e52; font-size: 11px; }
+    .divider { stroke: #2d5e1e; stroke-width: 0.5; }
+  </style>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="680" height="175" rx="12" class="bg-card"/>
+
+  <!-- Bus body -->
+  <rect x="38" y="38" width="88" height="52" rx="10" fill="#1a5c0e"/>
+  <!-- Roof -->
+  <rect x="38" y="38" width="88" height="10" rx="6" fill="#2d8c1a"/>
+  <rect x="42" y="38" width="80" height="6" rx="3" fill="#2d8c1a"/>
+  <!-- Windshield -->
+  <rect x="99" y="45" width="20" height="22" rx="4" fill="#0a1f0e" opacity="0.6"/>
+  <!-- Windows -->
+  <rect x="44" y="46" width="14" height="10" rx="3" fill="#c9f0a8" opacity="0.85"/>
+  <rect x="63" y="46" width="14" height="10" rx="3" fill="#c9f0a8" opacity="0.85"/>
+  <rect x="82" y="46" width="14" height="10" rx="3" fill="#c9f0a8" opacity="0.85"/>
+  <!-- Stripe -->
+  <rect x="38" y="78" width="88" height="4" fill="#2d8c1a"/>
+  <rect x="38" y="82" width="88" height="2" fill="#f0e8c9"/>
+  <!-- Wheels -->
+  <circle cx="57"  cy="94" r="9" fill="#1a1a1a" stroke="#3aad1a" stroke-width="2.5"/>
+  <circle cx="57"  cy="94" r="3.5" fill="#3aad1a"/>
+  <circle cx="107" cy="94" r="9" fill="#1a1a1a" stroke="#3aad1a" stroke-width="2.5"/>
+  <circle cx="107" cy="94" r="3.5" fill="#3aad1a"/>
+  <!-- Headlight -->
+  <rect x="120" y="64" width="8" height="5" rx="2" fill="#f0d060" opacity="0.9"/>
+  <!-- Speed lines -->
+  <line x1="26" y1="58" x2="12" y2="58" stroke="#2d5e1e" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="26" y1="65" x2="8"  y2="65" stroke="#2d5e1e" stroke-width="2"   stroke-linecap="round"/>
+  <line x1="26" y1="72" x2="12" y2="72" stroke="#2d5e1e" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- OGA -->
+  <text x="148" y="90" class="logo-text-main" font-size="52" letter-spacing="-1">OGA</text>
+  <!-- Gold dot -->
+  <circle cx="279" cy="76" r="4" fill="#d4a017"/>
+  <!-- TRANSIT -->
+  <text x="290" y="90" class="logo-text-main" font-size="52" letter-spacing="-1">TRANSIT</text>
+
+  <!-- Subtitle -->
+  <text x="149" y="110" class="logo-text-sub" font-size="10.5">NIGERIA'S PREMIUM BUS NETWORK</text>
+
+  <!-- Divider -->
+  <line x1="149" y1="125" x2="620" y2="125" class="divider"/>
+
+  <!-- Tagline -->
+  <text x="149" y="148" class="tagline">COMFORT · PUNCTUALITY · PRIDE</text>
+
+</svg>
