@@ -95,7 +95,7 @@ export default function AdminLayout({ currentPage, setCurrentPage, children }) {
             onClick={handleLogout}
             className="w-full flex items-center gap-3 text-sm text-green-300 hover:text-red-400 transition-colors"
           >
-            <img src="/public/log-out.svg" alt="Logout" className="w-5 h-5 invert" />
+            <img src="/log-out.svg" alt="Logout" className="w-5 h-5 invert" />
             <span>Logout</span>
           </button> 
         </div>
