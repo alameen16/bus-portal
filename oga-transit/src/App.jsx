@@ -4,9 +4,13 @@
  * Manages routing for all user types.
  * Also manages `selectedRoute` state so when a user
  * clicks a route card, that route is passed to BookingsPage.
+ *
+ * Features:
+ *  - Hash-based routing so hard refresh restores current page
+ *  - Booking page guard: redirects to Login if not authenticated
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "./context/AuthContext";
 
 // Public pages
@@ -36,14 +40,42 @@ const ADMIN_PAGES = [
   "AdminDrivers","AdminBookings","AdminStaff",
 ];
 
+// Pages that require login
+const PROTECTED_PAGES = ["Bookings", "MyBookings"];
+
+// Read initial page from URL hash, fallback to Home
+function getInitialPage() {
+  const hash = window.location.hash.replace("#/", "");
+  const valid = [
+    "Home","Bookings","MyBookings","Support",
+    "AllRoutes","Login","AdminRoutes","AdminBuses",
+    "AdminDrivers","AdminBookings","AdminStaff","DriverDashboard",
+  ];
+  return valid.includes(hash) ? hash : "Home";
+}
+
 export default function App() {
   const { user, loading } = useAuth();
-  const [currentPage,   setCurrentPage]   = useState("Home");
+  const [currentPage,   setCurrentPage]   = useState(getInitialPage);
   const [selectedRoute, setSelectedRoute] = useState(null);
+
+  // Sync page to URL hash so hard refresh restores position
+  useEffect(() => {
+    window.location.hash = `/${currentPage}`;
+  }, [currentPage]);
 
   function goToBookings(route = null) {
     setSelectedRoute(route);
     setCurrentPage("Bookings");
+  }
+
+  // Wrapped setCurrentPage that guards protected pages
+  function navigate(page) {
+    if (PROTECTED_PAGES.includes(page) && !user) {
+      setCurrentPage("Login");
+      return;
+    }
+    setCurrentPage(page);
   }
 
   if (loading) return (
@@ -55,16 +87,16 @@ export default function App() {
   // ── Driver portal ──
   if (currentPage === "DriverDashboard" ||
      (user?.role === "driver" && currentPage !== "Login")) {
-    return <DriverDashboard setCurrentPage={setCurrentPage} />;
+    return <DriverDashboard setCurrentPage={navigate} />;
   }
 
   // ── Admin pages (protected) ──
   if (ADMIN_PAGES.includes(currentPage)) {
     if (!user || !["superadmin","localAdmin"].includes(user.role)) {
-      return <LoginPage setCurrentPage={setCurrentPage} />;
+      return <LoginPage setCurrentPage={navigate} />;
     }
     return (
-      <AdminLayout currentPage={currentPage} setCurrentPage={setCurrentPage}>
+      <AdminLayout currentPage={currentPage} setCurrentPage={navigate}>
         {currentPage === "AdminRoutes"    && <RoutesPage />}
         {currentPage === "AdminBuses"     && <BusesPage />}
         {currentPage === "AdminDrivers"   && <DriversPage />}
@@ -76,35 +108,40 @@ export default function App() {
 
   // ── Login page ──
   if (currentPage === "Login") {
-    return <LoginPage setCurrentPage={setCurrentPage} />;
+    return <LoginPage setCurrentPage={navigate} />;
+  }
+
+  // ── Guard: if somehow on a protected page without user, redirect ──
+  if (PROTECTED_PAGES.includes(currentPage) && !user) {
+    return <LoginPage setCurrentPage={navigate} />;
   }
 
   // ── Public / Staff pages ──
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
-      <Navbar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      <Navbar currentPage={currentPage} setCurrentPage={navigate} />
 
       {currentPage === "Home" && (
-        <HomePage setCurrentPage={setCurrentPage} goToBookings={goToBookings} />
+        <HomePage setCurrentPage={navigate} goToBookings={goToBookings} />
       )}
 
       {currentPage === "Bookings" && (
         <BookingsPage
           route={selectedRoute}
-          setCurrentPage={setCurrentPage}
+          setCurrentPage={navigate}
           goToBookings={goToBookings}
         />
       )}
 
       {currentPage === "MyBookings" && (
-        <MyBookingsPage setCurrentPage={setCurrentPage} />
+        <MyBookingsPage setCurrentPage={navigate} />
       )}
 
       {currentPage === "Support" && <SupportPage />}
 
       {currentPage === "AllRoutes" && (
         <AllRoutesPage
-          setCurrentPage={setCurrentPage}
+          setCurrentPage={navigate}
           goToBookings={goToBookings}
         />
       )}
