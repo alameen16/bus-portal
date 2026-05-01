@@ -19,7 +19,7 @@ import SeatPicker from "../components/SeatPicker";
 import api from "../utils/api";
 import { useAuth } from "../context/AuthContext";
 
-const BASE_URL  = "http://localhost:5000/api";
+const BASE_URL  = import.meta.env.VITE_API_URL + "/api";
 const MAX_SEATS = 1;
 
 // ── Time helpers ─────────────────────────────────────────

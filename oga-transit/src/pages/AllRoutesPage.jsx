@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-const BASE_URL = "http://localhost:5000/api";
+const BASE_URL = import.meta.env.VITE_API_URL + "/api";;
 
 export default function AllRoutesPage({ setCurrentPage, goToBookings }) {
   const [from,          setFrom]          = useState("");
