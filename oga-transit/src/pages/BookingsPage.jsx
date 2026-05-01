@@ -143,7 +143,7 @@ export default function BookingsPage({ route: propRoute, setCurrentPage }) {
   useEffect(() => {
     if (!route) return;
     fetchTakenSeats();
-    const interval = setInterval(fetchTakenSeats, 8000);
+    const interval = setInterval(fetchTakenSeats, 80000);
     return () => clearInterval(interval);
   }, [fetchTakenSeats, route]);
 
