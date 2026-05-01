@@ -18,9 +18,8 @@ function getNowMinutes() {
   const now = new Date();
   return now.getHours() * 60 + now.getMinutes();
 }
-// TEMP — change these while testing
-const CUTOFF_OPEN  = 23 * 60; // push open cutoff to 11PM
-const CUTOFF_CLOSE = 24 * 60; // push close to midnight
+const CUTOFF_OPEN  = 14 * 60; // 2:00 PM
+const CUTOFF_CLOSE = 16 * 60; // 4:00 PM
 
 function getBookingStatus() {
   const now = getNowMinutes();
@@ -81,7 +80,16 @@ export default function MyBookingsPage({ setCurrentPage }) {
     try {
       const res = await api.get(`/bookings/my?userId=${user?.id}`);
       const all = res.bookings || [];
-      setTodayBooking(all.find(b => b.date === today) || null);
+
+      // ← exclude cancelled/refunded from today's active booking
+      setTodayBooking(
+        all.find(b =>
+          b.date === today &&
+          b.status !== "cancelled" &&
+          b.status !== "refunded"
+        ) || null
+      );
+
       setPastBookings(all.filter(b => b.date !== today));
     } catch {
       setTodayBooking(null);
@@ -94,6 +102,9 @@ export default function MyBookingsPage({ setCurrentPage }) {
   useEffect(() => {
     if (!user?.id) return;
     fetchBookings();
+    // Poll every 15s so if admin cancels, staff sees it quickly
+    const interval = setInterval(fetchBookings, 600000);
+    return () => clearInterval(interval);
   }, [fetchBookings, user?.id]);
 
   // ── Fetch taken seats for editing ────────────────────
@@ -115,7 +126,7 @@ export default function MyBookingsPage({ setCurrentPage }) {
 
   // ── Start editing — open with NO seat pre-selected ────
   function startEdit() {
-    setSelectedSeats([]); // ← empty so staff picks fresh
+    setSelectedSeats([]);
     setEditError("");
     setEditSuccess(false);
     setEditing(true);
@@ -382,9 +393,18 @@ export default function MyBookingsPage({ setCurrentPage }) {
                     {b.date} · Departs {b.departure} · {b.seats?.map(s => `Seat #${s}`).join(", ")}
                   </p>
                 </div>
-                <span className="text-xs font-bold text-stone-400 border border-stone-200 rounded-lg px-2.5 py-1 flex-shrink-0">
-                  {b.bookingRef}
-                </span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    b.status === "cancelled" ? "bg-red-100 text-red-600" :
+                    b.status === "refunded"  ? "bg-stone-100 text-stone-500" :
+                    "bg-green-100 text-green-700"
+                  }`}>
+                    {b.status}
+                  </span>
+                  <span className="text-xs font-bold text-stone-400 border border-stone-200 rounded-lg px-2.5 py-1">
+                    {b.bookingRef}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
