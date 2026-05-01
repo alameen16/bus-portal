@@ -18,8 +18,9 @@ function getNowMinutes() {
   const now = new Date();
   return now.getHours() * 60 + now.getMinutes();
 }
-const CUTOFF_OPEN  = 14 * 60; // 2:00 PM
-const CUTOFF_CLOSE = 16 * 60; // 4:00 PM
+// TEMP — change these while testing
+const CUTOFF_OPEN  = 23 * 60; // push open cutoff to 11PM
+const CUTOFF_CLOSE = 24 * 60; // push close to midnight
 
 function getBookingStatus() {
   const now = getNowMinutes();
