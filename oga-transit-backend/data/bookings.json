@@ -238,5 +238,30 @@
     "paymentStatus": "paid",
     "bookingRef": "OGA-2026-0010",
     "createdAt": "2026-04-30T14:17:19.862Z"
+  },
+  {
+    "id": "bk-b84d6c",
+    "userId": "u-004",
+    "passengerName": "Chidi Okeke",
+    "routeId": "rt-006",
+    "from": "Victoria Island",
+    "to": "Kola",
+    "fromTerminal": "VI (Ozumba Mbadiwe) Terminal",
+    "toTerminal": "Kola Bus Stop Terminal",
+    "departure": "16:00",
+    "date": "2026-05-01",
+    "seats": [
+      9
+    ],
+    "seat": 9,
+    "price": 0,
+    "pricePerSeat": 0,
+    "seatCount": 1,
+    "status": "confirmed",
+    "paymentMethod": "card",
+    "paymentStatus": "paid",
+    "bookingRef": "OGA-2026-0011",
+    "createdAt": "2026-05-01T18:36:36.569Z",
+    "updatedAt": "2026-05-01T18:51:44.975Z"
   }
 ]

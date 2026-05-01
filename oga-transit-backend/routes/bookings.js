@@ -102,6 +102,20 @@ router.post("/", verifyToken, (req, res) => {
   if (!route)                    return res.status(404).json({ message: "Route not found." });
   if (route.status !== "active") return res.status(400).json({ message: "This route is not active." });
 
+  // ── Prevent duplicate booking: one booking per user per day ──
+  const existingBooking = bookings.find(b =>
+    b.userId === req.user.id &&
+    b.date   === date &&
+    b.status !== "cancelled" &&
+    b.status !== "refunded"
+  );
+  if (existingBooking) {
+    return res.status(409).json({
+      message: "You already have a booking for today. Please edit or cancel your existing booking.",
+      bookingRef: existingBooking.bookingRef,
+    });
+  }
+
   // Check taken seats
   const takenSeats = bookings
     .filter(b =>
@@ -149,6 +163,63 @@ router.post("/", verifyToken, (req, res) => {
   res.status(201).json({ message: "Booking confirmed!", booking: newBooking });
 });
 
+/* ── UPDATE SEATS (staff — own booking only, before 2PM) ── */
+router.patch("/:id", verifyToken, (req, res) => {
+  const { seats } = req.body;
+  const seatsArray = Array.isArray(seats) ? seats : [seats].filter(Boolean);
+
+  if (seatsArray.length === 0) {
+    return res.status(400).json({ message: "seats are required." });
+  }
+
+  const bookings = readDB("bookings");
+  const index    = bookings.findIndex(b => b.id === req.params.id);
+
+  if (index === -1) return res.status(404).json({ message: "Booking not found." });
+
+  const booking = bookings[index];
+
+  // Staff can only edit their own booking
+  if (!OPS_ROLES.includes(req.user.role) && booking.userId !== req.user.id) {
+    return res.status(403).json({ message: "Access denied." });
+  }
+
+  // // Enforce 2PM cutoff
+  // const now     = new Date();
+  // const cutoff  = new Date();
+  // cutoff.setHours(14, 0, 0, 0);
+  // if (now >= cutoff && !OPS_ROLES.includes(req.user.role)) {
+  //   return res.status(403).json({ message: "Bookings cannot be edited after 2:00 PM." });
+  // }
+
+  // Check new seats aren't taken by someone else
+  const takenSeats = bookings
+    .filter(b =>
+      b.routeId   === booking.routeId &&
+      b.date      === booking.date &&
+      b.departure === booking.departure &&
+      b.status    !== "cancelled" &&
+      b.status    !== "refunded" &&
+      b.id        !== booking.id  // exclude current booking
+    )
+    .flatMap(b => b.seats || [b.seat])
+    .filter(Boolean);
+
+  const conflict = seatsArray.find(s => takenSeats.includes(Number(s)));
+  if (conflict) {
+    return res.status(409).json({ message: `Seat ${conflict} is already booked.` });
+  }
+
+  // Update seats
+  bookings[index].seats    = seatsArray.map(Number);
+  bookings[index].seat     = seatsArray[0];
+  bookings[index].seatCount = seatsArray.length;
+  bookings[index].updatedAt = new Date().toISOString();
+
+  writeDB("bookings", bookings);
+  res.json({ message: "Seat updated successfully.", booking: bookings[index] });
+});
+
 /* ── UPDATE STATUS (admin only) ── */
 router.patch("/:id/status", verifyToken, requireRole(OPS_ROLES), (req, res) => {
   const { status } = req.body;
@@ -166,6 +237,25 @@ router.patch("/:id/status", verifyToken, requireRole(OPS_ROLES), (req, res) => {
   writeDB("bookings", bookings);
 
   res.json({ message: `Booking ${status}.`, booking: bookings[index] });
+});
+
+/* ── DELETE / CANCEL BOOKING ── */
+router.delete("/:id", verifyToken, (req, res) => {
+  const bookings = readDB("bookings");
+  const index    = bookings.findIndex(b => b.id === req.params.id);
+
+  if (index === -1) return res.status(404).json({ message: "Booking not found." });
+
+  const booking = bookings[index];
+
+  // Staff can only cancel their own
+  if (!OPS_ROLES.includes(req.user.role) && booking.userId !== req.user.id) {
+    return res.status(403).json({ message: "Access denied." });
+  }
+
+  bookings[index].status = "cancelled";
+  writeDB("bookings", bookings);
+  res.json({ message: "Booking cancelled." });
 });
 
 export default router;

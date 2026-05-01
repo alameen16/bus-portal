@@ -18,8 +18,9 @@ function getNowMinutes() {
   const now = new Date();
   return now.getHours() * 60 + now.getMinutes();
 }
-const CUTOFF_OPEN  = 14 * 60; // 2:00 PM
-const CUTOFF_CLOSE = 16 * 60; // 4:00 PM
+// TEMP — change these while testing
+const CUTOFF_OPEN  = 23 * 60; // push open cutoff to 11PM
+const CUTOFF_CLOSE = 24 * 60; // push close to midnight
 
 function getBookingStatus() {
   const now = getNowMinutes();
@@ -90,11 +91,10 @@ export default function MyBookingsPage({ setCurrentPage }) {
     }
   }, [user?.id, today]);
 
-  // AFTER
-useEffect(() => { 
-  if (!user?.id) return;
-  fetchBookings(); 
-}, [fetchBookings, user?.id]);
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchBookings();
+  }, [fetchBookings, user?.id]);
 
   // ── Fetch taken seats for editing ────────────────────
   const fetchTakenSeats = useCallback(async () => {
@@ -103,7 +103,7 @@ useEffect(() => {
       const res = await api.get(
         `/bookings/taken-seats?routeId=${todayBooking.routeId}&date=${today}&departure=${todayBooking.departure}`
       );
-      // Exclude the user's own current seat from taken seats so they can re-select it
+      // Exclude user's own current seat so they can see it as available
       const taken = (res.takenSeats || []).filter(s => !todayBooking.seats?.includes(s));
       setTakenSeats(taken);
     } catch { setTakenSeats([]); }
@@ -113,9 +113,9 @@ useEffect(() => {
     if (editing) fetchTakenSeats();
   }, [editing, fetchTakenSeats]);
 
-  // ── Start editing ─────────────────────────────────────
+  // ── Start editing — open with NO seat pre-selected ────
   function startEdit() {
-    setSelectedSeats(todayBooking?.seats || []);
+    setSelectedSeats([]); // ← empty so staff picks fresh
     setEditError("");
     setEditSuccess(false);
     setEditing(true);
@@ -257,14 +257,19 @@ useEffect(() => {
                 ⚠️ {editError}
               </div>
             )}
-            <p className="text-stone-500 text-xs mb-4">
-              Your current seat: {" "}
-              {todayBooking.seats?.map(s => (
-                <span key={s} className="bg-stone-100 border border-stone-300 text-stone-600 font-bold text-xs px-2 py-0.5 rounded-md mr-1">
-                  #{s}
-                </span>
-              ))}
-            </p>
+
+            {/* Current seat info */}
+            <div className="bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-4 text-xs">
+              <p className="text-stone-500">
+                Your current seat:{" "}
+                {todayBooking.seats?.map(s => (
+                  <span key={s} className="bg-stone-200 border border-stone-300 text-stone-700 font-bold px-2 py-0.5 rounded-md mr-1">
+                    #{s}
+                  </span>
+                ))}
+              </p>
+              <p className="text-stone-400 mt-1">Click any available seat below to select your new seat.</p>
+            </div>
 
             <SeatPicker
               capacity={todayBooking.busCapacity || 24}
@@ -278,9 +283,14 @@ useEffect(() => {
               <Button
                 fullWidth
                 onClick={handleSaveEdit}
-                className={editLoading ? "opacity-50 cursor-not-allowed" : ""}
+                className={editLoading || selectedSeats.length === 0 ? "opacity-50 cursor-not-allowed" : ""}
               >
-                {editLoading ? "Saving..." : "Save New Seat →"}
+                {editLoading
+                  ? "Saving..."
+                  : selectedSeats.length === 0
+                    ? "Select a New Seat First"
+                    : "Save New Seat →"
+                }
               </Button>
               <button
                 onClick={cancelEdit}
@@ -369,8 +379,7 @@ useEffect(() => {
                 <div>
                   <p className="font-bold text-stone-800 text-sm">{b.from} → {b.to}</p>
                   <p className="text-stone-400 text-xs mt-0.5">
-                    {b.date} · Departs {b.departure} · {" "}
-                    {b.seats?.map(s => `Seat #${s}`).join(", ")}
+                    {b.date} · Departs {b.departure} · {b.seats?.map(s => `Seat #${s}`).join(", ")}
                   </p>
                 </div>
                 <span className="text-xs font-bold text-stone-400 border border-stone-200 rounded-lg px-2.5 py-1 flex-shrink-0">

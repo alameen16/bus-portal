@@ -1,15 +1,5 @@
 /**
  * pages/BookingsPage.jsx — Staff Shuttle Booking
- *
- * Free daily staff shuttle booking system.
- * One seat per staff per day.
- * Booking rules:
- *   - Before 2PM : can book
- *   - 2PM–4PM   : countdown shown, new bookings still allowed, no edits
- *   - After 4PM : bookings closed for the day
- *
- * Routes are fetched dynamically from the API.
- * If no routes exist, shows an empty state.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -27,8 +17,9 @@ function getNowMinutes() {
   const now = new Date();
   return now.getHours() * 60 + now.getMinutes();
 }
-const CUTOFF_OPEN  = 14 * 60;
-const CUTOFF_CLOSE = 16 * 60;
+const CUTOFF_OPEN  = 23 * 60; // push open cutoff to 11PM
+const CUTOFF_CLOSE = 24 * 60; // push close to midnight
+
 
 function getBookingStatus() {
   const now = getNowMinutes();
@@ -81,6 +72,28 @@ export default function BookingsPage({ route: propRoute, setCurrentPage }) {
     return () => clearInterval(tick);
   }, []);
 
+  // ── Check if user already has a booking today ─────────
+  const [existingBooking,  setExistingBooking]  = useState(null);
+  const [existingChecked,  setExistingChecked]  = useState(false);
+
+  const today = new Date().toISOString().split("T")[0];
+
+  useEffect(() => {
+    if (!user?.id) { setExistingChecked(true); return; }
+    api.get(`/bookings/my?userId=${user.id}`)
+      .then(res => {
+        const all = res.bookings || [];
+        const todayBooking = all.find(
+          b => b.date === today &&
+          b.status !== "cancelled" &&
+          b.status !== "refunded"
+        );
+        setExistingBooking(todayBooking || null);
+      })
+      .catch(() => setExistingBooking(null))
+      .finally(() => setExistingChecked(true));
+  }, [user?.id, today]);
+
   // ── Route — use prop if passed, else fetch first active route ──
   const [route,        setRoute]        = useState(propRoute || null);
   const [routeLoading, setRouteLoading] = useState(!propRoute);
@@ -117,8 +130,6 @@ export default function BookingsPage({ route: propRoute, setCurrentPage }) {
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
 
-  const today = new Date().toISOString().split("T")[0];
-
   useEffect(() => {
     if (!route) { setBusLoading(false); return; }
     const busId = route.busId || route.bus?.id;
@@ -143,7 +154,7 @@ export default function BookingsPage({ route: propRoute, setCurrentPage }) {
   useEffect(() => {
     if (!route) return;
     fetchTakenSeats();
-    const interval = setInterval(fetchTakenSeats, 80000);
+    const interval = setInterval(fetchTakenSeats, 30000);
     return () => clearInterval(interval);
   }, [fetchTakenSeats, route]);
 
@@ -189,12 +200,42 @@ export default function BookingsPage({ route: propRoute, setCurrentPage }) {
     }
   }
 
-  // ── Loading state ─────────────────────────────────────
-  if (routeLoading) {
+  // ── Loading states ────────────────────────────────────
+  if (!existingChecked || routeLoading) {
     return (
       <div className="max-w-md mx-auto px-6 py-24 text-center">
         <div className="text-4xl animate-bounce mb-4">🚌</div>
-        <p className="text-stone-400 text-sm">Loading routes...</p>
+        <p className="text-stone-400 text-sm">Loading...</p>
+      </div>
+    );
+  }
+
+  // ── Already booked today ──────────────────────────────
+  if (existingBooking) {
+    return (
+      <div className="max-w-md mx-auto px-6 py-24 text-center">
+        <div className="text-5xl mb-5">🎟️</div>
+        <h2 className="font-black text-2xl text-stone-900 mb-2">Already Booked!</h2>
+        <p className="text-stone-500 text-sm leading-relaxed mb-2">
+          You already have a shuttle booking for today.
+        </p>
+        <p className="text-stone-400 text-xs mb-6">
+          Booking Ref: <span className="font-bold text-stone-600">{existingBooking.bookingRef}</span>
+        </p>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => setCurrentPage("MyBookings")}
+            className="text-sm font-bold text-white bg-green-700 rounded-lg px-5 py-2.5 hover:bg-green-800 transition-colors"
+          >
+            View My Booking →
+          </button>
+          <button
+            onClick={() => setCurrentPage("Home")}
+            className="text-sm font-semibold text-stone-500 hover:text-stone-700 transition-colors"
+          >
+            ← Back to Home
+          </button>
+        </div>
       </div>
     );
   }
@@ -271,7 +312,7 @@ export default function BookingsPage({ route: propRoute, setCurrentPage }) {
           {route.from} → {route.to}
         </h1>
         <p className="text-stone-500 text-sm mt-1">
-          {route.duration} ·Staff shuttle ·
+          {route.duration} · Staff shuttle
         </p>
       </div>
 
@@ -326,7 +367,7 @@ export default function BookingsPage({ route: propRoute, setCurrentPage }) {
             {!busLoading && bus && (
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <span className="bg-green-50 border border-green-200 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full">
-                   {bus.plateNumber}
+                  {bus.plateNumber}
                 </span>
                 {bus.amenities?.length > 0 && (
                   <span className="text-stone-400 text-xs">{bus.amenities.join(" · ")}</span>
