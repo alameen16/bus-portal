@@ -10,22 +10,15 @@ import { verifyToken, requireRole } from "../middleware/auth.js";
 
 const router = Router();
 
-// All valid admin roles — must match frontend exactly
 const VALID_ROLES = ["superadmin", "localAdmin", "staff", "driver"];
-
-// All roles that count as "staff" (shown in staff page)
-const STAFF_ROLES = ["superadmin", "localAdmin", "staff"];
 
 
 /* ── GET ALL STAFF ── */
 router.get("/", verifyToken, requireRole(["superadmin"]), (req, res) => {
   const users = readDB("users");
-
-  // Include all admin-type roles (old and new naming)
   const staff = users
     .filter(u => ["superadmin", "localAdmin", "staff"].includes(u.role))
     .map(({ password, ...u }) => u);
-
   res.json(staff);
 });
 
@@ -34,7 +27,6 @@ router.get("/", verifyToken, requireRole(["superadmin"]), (req, res) => {
 router.post("/", verifyToken, requireRole(["superadmin"]), async (req, res) => {
   const { name, email, phone, role, password } = req.body;
 
-  // Validate required fields with clear messages
   if (!name?.trim())     return res.status(400).json({ message: "Full name is required." });
   if (!email?.trim())    return res.status(400).json({ message: "Email address is required." });
   if (!role)             return res.status(400).json({ message: "Role is required." });
@@ -47,7 +39,6 @@ router.post("/", verifyToken, requireRole(["superadmin"]), async (req, res) => {
 
   const users = readDB("users");
 
-  // Check for duplicate email
   const exists = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
   if (exists) {
     return res.status(409).json({ message: `Email "${email}" is already registered. Use a different email.` });
@@ -143,18 +134,27 @@ router.patch("/:id/status", verifyToken, requireRole(["superadmin"]), (req, res)
 
 /* ── DELETE STAFF ── */
 router.delete("/:id", verifyToken, requireRole(["superadmin"]), (req, res) => {
+  // Prevent self-deletion
   if (req.params.id === req.user.id) {
     return res.status(400).json({ message: "You cannot delete your own account." });
   }
 
-  const users    = readDB("users");
-  const filtered = users.filter(u => u.id !== req.params.id);
+  const users  = readDB("users");
+  const target = users.find(u => u.id === req.params.id);
 
-  if (filtered.length === users.length) {
+  if (!target) {
     return res.status(404).json({ message: "Staff not found." });
   }
 
-  writeDB("users", filtered);
+  // Prevent deleting the last superadmin
+  if (target.role === "superadmin") {
+    const superadmins = users.filter(u => u.role === "superadmin");
+    if (superadmins.length === 1) {
+      return res.status(400).json({ message: "Cannot delete the only superadmin. Assign another superadmin first." });
+    }
+  }
+
+  writeDB("users", users.filter(u => u.id !== req.params.id));
   res.json({ message: "Staff member removed." });
 });
 

@@ -9,6 +9,7 @@
  * Server runs at: http://localhost:5000
  */
 
+import "dotenv/config";
 import express    from "express";
 import cors       from "cors";
 

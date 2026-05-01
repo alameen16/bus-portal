@@ -354,7 +354,7 @@ export function AdminBookingsPage() {
   useEffect(() => { setLoading(bLoading); }, [bLoading]);
 
   async function updateStatus(id, status) {
-    try { await api.patch(`/bookings/${id}/status`, { status }); flash(`Booking ${status}.`); load(); }
+    try { await api.patch(`/bookings/${id}/status`, { status }); flash(`Booking ${status}.`); }
     catch (e) { setError(e.message); }
   }
 

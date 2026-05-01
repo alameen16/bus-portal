@@ -12,7 +12,7 @@
 
 import jwt from "jsonwebtoken";
 
-export const JWT_SECRET = "oga-transit-secret-key-2025";
+export const JWT_SECRET = process.env.JWT_SECRET;;
 
 // Who can access the admin portal
 export const ADMIN_ROLES = ["superadmin", "localAdmin"];
