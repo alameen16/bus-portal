@@ -1,33 +1,43 @@
 /**
- * pages/SupportPage.jsx — Customer Support Page
- * 
- * A simple support page with:
- *   - Contact options (phone, WhatsApp, email)
- *   - FAQ accordion
- *   - A message form
+ * pages/SupportPage.jsx — Staff Support Page
  */
 
 import { useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 
-// List of frequently asked questions
 const FAQS = [
   {
-    question: "How do I change or cancel my booking?",
-    answer: "You can modify or cancel your booking up to 3 hours before departure. Go to My Bookings, find your trip, and click 'Modify'. Full refunds are available for cancellations made 24+ hours before departure.",
+    question: "What time does booking open and close?",
+    answer: "Bookings open at 12:00 AM and close at 4:00 PM daily. You can edit or cancel your booking before 2:00 PM. After 2:00 PM bookings are locked but new bookings are still allowed until 4:00 PM.",
   },
   {
-    question: "What is the luggage allowance?",
-    answer: "Each passenger is allowed one large bag (up to 20kg) stored under the bus, plus one small carry-on bag. Extra luggage can be added at booking for a small fee.",
+    question: "Can I book more than one seat?",
+    answer: "No. Each staff member is allowed one seat per day on the shuttle. This ensures fair access for all staff.",
   },
   {
-    question: "Are there stops along the route?",
-    answer: "Yes! Most routes have 1–2 rest stops lasting 15–20 minutes. Stop locations are shown in the app during your journey.",
+    question: "How do I change my seat after booking?",
+    answer: "Go to My Bookings, find today's booking, and click 'Change Seat'. You can change your seat as long as it is before 2:00 PM. After 2:00 PM seat changes are no longer allowed.",
   },
   {
-    question: "Is Wi-Fi available on the bus?",
-    answer: "Wi-Fi is available on all Executive Coach routes. Standard routes do not currently have Wi-Fi but this is being rolled out in 2026.",
+    question: "What happens if I miss the shuttle?",
+    answer: "The shuttle departs at the scheduled time. If you miss it, your booking will not be automatically cancelled. Contact the admin or support team for assistance.",
+  },
+  {
+    question: "How do I cancel my booking?",
+    answer: "Go to My Bookings and click 'Cancel Booking'. Cancellations are only allowed before 2:00 PM. If you need to cancel after this time, contact the admin directly.",
+  },
+  {
+    question: "I can't log in to my account. What should I do?",
+    answer: "Make sure you are using the correct email address and password. If you have forgotten your password, contact your admin to have it reset. Self-service password reset is not currently available.",
+  },
+  {
+    question: "The seat I selected is showing as taken but I didn't book it. What do I do?",
+    answer: "Seat availability updates in real time. Another staff member may have booked that seat at the same time. Please select a different available seat. If the issue persists contact support.",
+  },
+  {
+    question: "Who do I contact if I have an issue with my booking?",
+    answer: "You can reach the support team via phone, WhatsApp, or email using the contact details on this page. An admin can also resolve booking issues directly from the admin portal.",
   },
 ];
 
@@ -41,18 +51,18 @@ export default function SupportPage() {
           We're here for you
         </p>
         <h1 className="font-black text-stone-900 text-4xl mb-3">
-          24/7 Support
+          Support
         </h1>
         <p className="text-stone-500 text-sm max-w-md mx-auto">
-          Got a question or issue? Reach us any way you like — our team is always ready.
+          Got a question or issue with the shuttle booking? Reach us any way you like.
         </p>
       </div>
 
       {/* Contact cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-        <ContactCard icon="📞" label="Call Us"      value="0800-OGA-TRANSIT" sub="Toll free · 24/7" />
-        <ContactCard icon="💬" label="WhatsApp"     value="+234 800 123 4567"  sub="Reply in minutes" />
-        <ContactCard icon="✉️" label="Email"        value="help@ogatransit.ng" sub="Response within 2hrs" />
+        <ContactCard icon="📞" label="Call Us"  value="0800-000-0000"       sub="Mon–Fri · 7AM–6PM" />
+        <ContactCard icon="💬" label="WhatsApp" value="+234 800 000 0000"   sub="Reply in minutes" />
+        <ContactCard icon="✉️" label="Email"    value="support@busportal.ng" sub="Response within 2hrs" />
       </div>
 
       {/* Two column: FAQ + Message form */}
@@ -65,7 +75,6 @@ export default function SupportPage() {
   );
 }
 
-// One contact method card
 function ContactCard({ icon, label, value, sub }) {
   return (
     <div className="bg-white border border-stone-200 rounded-2xl p-5 text-center shadow-sm hover:border-green-300 transition-colors cursor-pointer">
@@ -77,13 +86,10 @@ function ContactCard({ icon, label, value, sub }) {
   );
 }
 
-// Accordion FAQ section
 function FAQSection() {
-  // Track which FAQ is currently open (-1 = none)
   const [openIndex, setOpenIndex] = useState(-1);
 
   function toggle(index) {
-    // If clicking the same one, close it; otherwise open the new one
     setOpenIndex((prev) => (prev === index ? -1 : index));
   }
 
@@ -93,29 +99,22 @@ function FAQSection() {
       <div className="space-y-2">
         {FAQS.map((faq, index) => {
           const isOpen = openIndex === index;
-
           return (
             <div key={index} className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-
-              {/* Question row — clicking toggles the answer */}
               <button
                 onClick={() => toggle(index)}
                 className="w-full flex items-center justify-between px-4 py-3 text-left"
               >
                 <span className="font-semibold text-stone-800 text-sm">{faq.question}</span>
-                {/* Rotate the arrow when open */}
                 <span className={`text-stone-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
                   ▾
                 </span>
               </button>
-
-              {/* Answer — only shown when isOpen is true */}
               {isOpen && (
                 <div className="px-4 pb-4">
                   <p className="text-stone-500 text-sm leading-relaxed">{faq.answer}</p>
                 </div>
               )}
-
             </div>
           );
         })}
@@ -124,7 +123,6 @@ function FAQSection() {
   );
 }
 
-// Contact message form
 function MessageForm() {
   const [submitted, setSubmitted] = useState(false);
   const [name,    setName]    = useState("");
@@ -146,9 +144,7 @@ function MessageForm() {
 
   return (
     <Card title="Send us a Message" className="p-5">
-
       <div className="space-y-3">
-        {/* Name */}
         <div>
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">
             Your Name
@@ -161,7 +157,6 @@ function MessageForm() {
           />
         </div>
 
-        {/* Email */}
         <div>
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">
             Email Address
@@ -175,7 +170,6 @@ function MessageForm() {
           />
         </div>
 
-        {/* Message textarea */}
         <div>
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">
             Message
@@ -193,7 +187,6 @@ function MessageForm() {
           Send Message
         </Button>
       </div>
-
     </Card>
   );
 }
