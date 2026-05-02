@@ -1,185 +1,157 @@
 /**
- * routes/buses.js — Buses (Fleet) API
- *
- * GET    /api/buses           → get all buses
- * GET    /api/buses/:id       → get one bus
- * POST   /api/buses           → add a new bus
- * PUT    /api/buses/:id       → update bus details
- * DELETE /api/buses/:id       → remove a bus (superadmin only)
- * PATCH  /api/buses/:id/status → change status (active/maintenance/inactive)
+ * routes/buses.js — Buses (Fleet) API (MongoDB version)
  */
 
 import { Router } from "express";
 import { v4 as uuidv4 } from "uuid";
-import { readDB, writeDB } from "../utils/db.js";
+import Bus from "../models/Bus.js";
+import Route from "../models/Route.js";
+import Driver from "../models/Driver.js";
 import { verifyToken, requireRole } from "../middleware/auth.js";
 
 const router = Router();
-const ADMIN_ROLES = ["superadmin", "operations"];
-
+const ADMIN_ROLES = ["superadmin", "localAdmin"];
 
 /* ── GET ALL BUSES ── */
-router.get("/", verifyToken, (req, res) => {
-  const buses   = readDB("buses");
-  const routes  = readDB("routes");
-  const drivers = readDB("drivers");
+router.get("/", verifyToken, async (req, res) => {
+  try {
+    const buses   = await Bus.find();
+    const routes  = await Route.find();
+    const drivers = await Driver.find();
 
-  const enriched = buses.map(bus => ({
-    ...bus,
-    route:  routes.find(r  => r.id === bus.assignedRouteId)  || null,
-    driver: drivers.find(d => d.id === bus.assignedDriverId) || null,
-  }));
+    const enriched = buses.map(bus => ({
+      ...bus.toObject(),
+      route:  routes.find(r  => r.id === bus.assignedRouteId)  || null,
+      driver: drivers.find(d => d.id === bus.assignedDriverId) || null,
+    }));
 
-  res.json(enriched);
+    res.json(enriched);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch buses." });
+  }
 });
-
 
 /* ── GET ONE BUS ── */
-router.get("/:id", verifyToken, (req, res) => {
-  const buses   = readDB("buses");
-  const routes  = readDB("routes");
-  const drivers = readDB("drivers");
+router.get("/:id", verifyToken, async (req, res) => {
+  try {
+    const bus = await Bus.findOne({ id: req.params.id });
+    if (!bus) return res.status(404).json({ message: "Bus not found." });
 
-  const bus = buses.find(b => b.id === req.params.id);
-  if (!bus) return res.status(404).json({ message: "Bus not found." });
+    const routes  = await Route.find();
+    const drivers = await Driver.find();
 
-  res.json({
-    ...bus,
-    route:  routes.find(r  => r.id === bus.assignedRouteId)  || null,
-    driver: drivers.find(d => d.id === bus.assignedDriverId) || null,
-  });
+    res.json({
+      ...bus.toObject(),
+      route:  routes.find(r  => r.id === bus.assignedRouteId)  || null,
+      driver: drivers.find(d => d.id === bus.assignedDriverId) || null,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch bus." });
+  }
 });
-
 
 /* ── ADD A NEW BUS ── */
-router.post("/", verifyToken, requireRole(ADMIN_ROLES), (req, res) => {
-  const { plateNumber, model, capacity, year, amenities, color } = req.body;
+router.post("/", verifyToken, requireRole(ADMIN_ROLES), async (req, res) => {
+  try {
+    const { plateNumber, model, capacity, year, amenities, color } = req.body;
 
-  if (!plateNumber || !model || !capacity) {
-    return res.status(400).json({ message: "plateNumber, model, and capacity are required." });
+    if (!plateNumber || !model || !capacity)
+      return res.status(400).json({ message: "plateNumber, model, and capacity are required." });
+
+    const existing = await Bus.findOne({ plateNumber });
+    if (existing)
+      return res.status(409).json({ message: "A bus with this plate number already exists." });
+
+    const newBus = await Bus.create({
+      id:               `bus-${uuidv4().slice(0, 6)}`,
+      plateNumber,
+      model,
+      capacity:         Number(capacity),
+      year:             Number(year) || new Date().getFullYear(),
+      status:           "active",
+      assignedRouteId:  null,
+      assignedDriverId: null,
+      lastMaintenance:  null,
+      nextMaintenance:  null,
+      amenities:        amenities || [],
+      color:            color || "Green/White",
+    });
+
+    res.status(201).json({ message: "Bus added successfully.", bus: newBus });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to add bus." });
   }
-
-  const buses = readDB("buses");
-
-  if (buses.find(b => b.plateNumber === plateNumber)) {
-    return res.status(409).json({ message: "A bus with this plate number already exists." });
-  }
-
-  const newBus = {
-    id:               `bus-${uuidv4().slice(0, 6)}`,
-    plateNumber,
-    model,
-    capacity:         Number(capacity),
-    year:             Number(year) || new Date().getFullYear(),
-    status:           "active",
-    assignedRouteId:  null,
-    assignedDriverId: null,
-    lastMaintenance:  null,
-    nextMaintenance:  null,
-    amenities:        amenities || [],
-    color:            color || "Green/White",
-    createdAt:        new Date().toISOString(),
-  };
-
-  buses.push(newBus);
-  writeDB("buses", buses);
-
-  res.status(201).json({ message: "Bus added successfully.", bus: newBus });
 });
-
 
 /* ── UPDATE A BUS ── */
-router.put("/:id", verifyToken, requireRole(ADMIN_ROLES), (req, res) => {
-  const buses = readDB("buses");
-  const index = buses.findIndex(b => b.id === req.params.id);
+router.put("/:id", verifyToken, requireRole(ADMIN_ROLES), async (req, res) => {
+  try {
+    const bus = await Bus.findOne({ id: req.params.id });
+    if (!bus) return res.status(404).json({ message: "Bus not found." });
 
-  if (index === -1) return res.status(404).json({ message: "Bus not found." });
+    Object.assign(bus, req.body, { id: req.params.id });
+    await bus.save();
 
-  buses[index] = { ...buses[index], ...req.body, id: req.params.id };
-  writeDB("buses", buses);
-
-  res.json({ message: "Bus updated successfully.", bus: buses[index] });
+    res.json({ message: "Bus updated successfully.", bus });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update bus." });
+  }
 });
-
 
 /* ── CHANGE BUS STATUS ── */
-router.patch("/:id/status", verifyToken, requireRole(ADMIN_ROLES), (req, res) => {
-  const { status } = req.body;
-  const validStatuses = ["active", "maintenance", "inactive"];
+router.patch("/:id/status", verifyToken, requireRole(ADMIN_ROLES), async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ["active", "maintenance", "inactive"];
 
-  if (!validStatuses.includes(status)) {
-    return res.status(400).json({ message: `Status must be one of: ${validStatuses.join(", ")}` });
-  }
+    if (!validStatuses.includes(status))
+      return res.status(400).json({ message: `Status must be one of: ${validStatuses.join(", ")}` });
 
-  const buses   = readDB("buses");
-  const routes  = readDB("routes");
-  const drivers = readDB("drivers");
+    const bus = await Bus.findOne({ id: req.params.id });
+    if (!bus) return res.status(404).json({ message: "Bus not found." });
 
-  const index = buses.findIndex(b => b.id === req.params.id);
-  if (index === -1) return res.status(404).json({ message: "Bus not found." });
+    bus.status = status;
 
-  buses[index].status = status;
+    // Unassign from route and driver when going inactive/maintenance
+    if (status === "maintenance" || status === "inactive") {
+      const { assignedRouteId, assignedDriverId } = bus;
 
-  // When going into maintenance or inactive, unassign from route and driver
-  if (status === "maintenance" || status === "inactive") {
-    const { assignedRouteId, assignedDriverId } = buses[index];
-
-    // Clear the bus side
-    buses[index].assignedRouteId  = null;
-    buses[index].assignedDriverId = null;
-
-    // Clear the route's busId
-    if (assignedRouteId) {
-      const routeIdx = routes.findIndex(r => r.id === assignedRouteId);
-      if (routeIdx !== -1) {
-        routes[routeIdx].busId = null;
-        writeDB("routes", routes);
+      if (assignedRouteId) {
+        await Route.findOneAndUpdate({ id: assignedRouteId }, { busId: null });
       }
+      if (assignedDriverId) {
+        await Driver.findOneAndUpdate({ id: assignedDriverId }, { assignedBusId: null });
+      }
+
+      bus.assignedRouteId  = null;
+      bus.assignedDriverId = null;
     }
 
-    // Clear the driver's assignedBusId
-    if (assignedDriverId) {
-      const driverIdx = drivers.findIndex(d => d.id === assignedDriverId);
-      if (driverIdx !== -1) {
-        drivers[driverIdx].assignedBusId = null;
-        writeDB("drivers", drivers);
-      }
-    }
+    await bus.save();
+    res.json({ message: `Bus status updated to "${status}".`, bus });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update bus status." });
   }
-
-  writeDB("buses", buses);
-  res.json({ message: `Bus status updated to "${status}".`, bus: buses[index] });
 });
 
-
 /* ── DELETE A BUS ── */
-router.delete("/:id", verifyToken, requireRole(["superadmin"]), (req, res) => {
-  const buses   = readDB("buses");
-  const routes  = readDB("routes");
-  const drivers = readDB("drivers");
+router.delete("/:id", verifyToken, requireRole(["superadmin"]), async (req, res) => {
+  try {
+    const bus = await Bus.findOne({ id: req.params.id });
+    if (!bus) return res.status(404).json({ message: "Bus not found." });
 
-  const bus = buses.find(b => b.id === req.params.id);
-  if (!bus) return res.status(404).json({ message: "Bus not found." });
-
-  // Unassign from route and driver before deleting
-  if (bus.assignedRouteId) {
-    const routeIdx = routes.findIndex(r => r.id === bus.assignedRouteId);
-    if (routeIdx !== -1) {
-      routes[routeIdx].busId = null;
-      writeDB("routes", routes);
+    if (bus.assignedRouteId) {
+      await Route.findOneAndUpdate({ id: bus.assignedRouteId }, { busId: null });
     }
-  }
-
-  if (bus.assignedDriverId) {
-    const driverIdx = drivers.findIndex(d => d.id === bus.assignedDriverId);
-    if (driverIdx !== -1) {
-      drivers[driverIdx].assignedBusId = null;
-      writeDB("drivers", drivers);
+    if (bus.assignedDriverId) {
+      await Driver.findOneAndUpdate({ id: bus.assignedDriverId }, { assignedBusId: null });
     }
-  }
 
-  writeDB("buses", buses.filter(b => b.id !== req.params.id));
-  res.json({ message: "Bus removed from fleet." });
+    await Bus.deleteOne({ id: req.params.id });
+    res.json({ message: "Bus removed from fleet." });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to delete bus." });
+  }
 });
 
 export default router;

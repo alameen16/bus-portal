@@ -12,6 +12,7 @@
 import "dotenv/config";
 import express    from "express";
 import cors       from "cors";
+import { connectDB } from "./config/db.js";
 
 // Import all route handlers
 import authRoutes    from "./routes/auth.js";
@@ -25,19 +26,28 @@ import staffRoutes   from "./routes/staff.js";
 const app  = express();
 const PORT = process.env.PORT || 5000;
 
+// Connect to MongoDB
+connectDB();
+
 /* ─────────────────────────────────────────────
    MIDDLEWARE
    These run on EVERY request before the route handlers
 ───────────────────────────────────────────── */
 
-// Allow requests from the React frontend (localhost:5173)
+// Allow requests from any Vercel deployment + local dev
 app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:3000",
-    "https://bus-portal-rho.vercel.app"  // your real URL
-  ],
+  origin: function(origin, callback) {
+    const allowed = [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:3000",
+    ];
+    if (!origin || allowed.includes(origin) || origin.endsWith(".vercel.app")) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
 }));
 
@@ -101,14 +111,5 @@ app.use((err, req, res, next) => {
    START THE SERVER
 ───────────────────────────────────────────── */
 app.listen(PORT, () => {
-  console.log("\n🚌 Oga Transit Backend Started!");
-  console.log(`📡 Server running at: http://localhost:${PORT}`);
-  console.log(`🔍 Health check:      http://localhost:${PORT}/api/health`);
-  console.log("\n📋 Test Login Credentials:");
-  console.log("   Super Admin  → admin@ogatransit.ng   / password");
-  console.log("   Operations   → ops@ogatransit.ng     / password");
-  console.log("   Finance      → finance@ogatransit.ng / password");
-  console.log("   Driver       → driver1@ogatransit.ng / password");
-  console.log("   User         → user@ogatransit.ng    / password");
-  console.log("\n💡 All passwords are: password\n");
+  console.log("\n🚌 Bus Portal Backend is Running!");
 });

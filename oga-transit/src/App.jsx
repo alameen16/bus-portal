@@ -18,6 +18,7 @@ import Navbar          from "./components/Navbar";
 import HomePage        from "./pages/HomePage";
 import BookingsPage    from "./pages/BookingsPage";
 import MyBookingsPage  from "./pages/MyBookingsPage";
+import ProfilePage     from "./pages/ProfilePage";
 import SupportPage     from "./pages/SupportPage";
 import AllRoutesPage   from "./pages/AllRoutesPage";
 import LoginPage       from "./pages/LoginPage";
@@ -41,13 +42,13 @@ const ADMIN_PAGES = [
 ];
 
 // Pages that require login
-const PROTECTED_PAGES = ["Bookings", "MyBookings"];
+const PROTECTED_PAGES = ["Bookings", "MyBookings", "Profile"];
 
 // Read initial page from URL hash, fallback to Home
 function getInitialPage() {
   const hash = window.location.hash.replace("#/", "");
   const valid = [
-    "Home","Bookings","MyBookings","Support",
+    "Home","Bookings","MyBookings","Profile","Support",
     "AllRoutes","Login","AdminRoutes","AdminBuses",
     "AdminDrivers","AdminBookings","AdminStaff","DriverDashboard",
   ];
@@ -135,6 +136,10 @@ export default function App() {
 
       {currentPage === "MyBookings" && (
         <MyBookingsPage setCurrentPage={navigate} />
+      )}
+
+      {currentPage === "Profile" && (
+        <ProfilePage setCurrentPage={navigate} />
       )}
 
       {currentPage === "Support" && <SupportPage />}

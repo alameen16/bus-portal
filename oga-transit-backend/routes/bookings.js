@@ -1,261 +1,228 @@
 /**
- * routes/bookings.js — Bookings API
- * Staff (not admin) can create and view their own bookings.
- * superadmin + localAdmin can manage all bookings.
+ * routes/bookings.js — Bookings API (MongoDB version)
  */
 
 import { Router } from "express";
 import { v4 as uuidv4 } from "uuid";
-import { readDB, writeDB } from "../utils/db.js";
+import Booking from "../models/Booking.js";
+import Route from "../models/Route.js";
 import { verifyToken, requireRole, OPS_ROLES } from "../middleware/auth.js";
 
 const router = Router();
 const MAX_SEATS = 3;
 
-/* ── TAKEN SEATS (live availability) ── */
-router.get("/taken-seats", verifyToken, (req, res) => {
-  const { routeId, date, departure } = req.query;
-  if (!routeId || !date || !departure) {
-    return res.status(400).json({ message: "routeId, date, and departure are required." });
+/* ── TAKEN SEATS ── */
+router.get("/taken-seats", verifyToken, async (req, res) => {
+  try {
+    const { routeId, date, departure } = req.query;
+    if (!routeId || !date || !departure)
+      return res.status(400).json({ message: "routeId, date, and departure are required." });
+
+    const bookings = await Booking.find({
+      routeId, date, departure,
+      status: { $nin: ["cancelled", "refunded"] },
+    });
+
+    const takenSeats = bookings.flatMap(b => b.seats?.length ? b.seats : [b.seat]).filter(Boolean);
+    res.json({ takenSeats });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch taken seats." });
   }
-  const bookings = readDB("bookings");
-  const takenSeats = bookings
-    .filter(b =>
-      b.routeId   === routeId &&
-      b.date      === date &&
-      b.departure === departure &&
-      b.status    !== "cancelled" &&
-      b.status    !== "refunded"
-    )
-    .flatMap(b => b.seats || [b.seat])
-    .filter(Boolean);
-  res.json({ takenSeats });
 });
 
-// GET /api/bookings/my?userId=u-cd3ecf
-router.get("/my", verifyToken, (req, res) => {
-  const { userId } = req.query;
-  const bookings = readDB("bookings");
-  const userBookings = bookings
-    .filter(b => b.userId === userId)
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
-  res.json({ bookings: userBookings });
+/* ── MY BOOKINGS ── */
+router.get("/my", verifyToken, async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const bookings = await Booking.find({ userId }).sort({ createdAt: -1 });
+    res.json({ bookings });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch bookings." });
+  }
 });
 
-/* ── GET ALL BOOKINGS ──
-   Admin → all bookings
-   Staff/driver → own bookings only
-*/
-router.get("/", verifyToken, (req, res) => {
-  const bookings = readDB("bookings");
-  const routes   = readDB("routes");
+/* ── GET ALL BOOKINGS ── */
+router.get("/", verifyToken, async (req, res) => {
+  try {
+    const filter = {};
+    if (!OPS_ROLES.includes(req.user.role)) filter.userId = req.user.id;
+    if (req.query.status)  filter.status  = req.query.status;
+    if (req.query.date)    filter.date    = req.query.date;
+    if (req.query.routeId) filter.routeId = req.query.routeId;
 
-  let result = bookings;
-
-  // Non-admin users only see their own bookings
-  if (!OPS_ROLES.includes(req.user.role)) {
-    result = bookings.filter(b => b.userId === req.user.id);
+    const bookings = await Booking.find(filter).sort({ createdAt: -1 });
+    res.json(bookings);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch bookings." });
   }
-
-  if (req.query.status)  result = result.filter(b => b.status  === req.query.status);
-  if (req.query.date)    result = result.filter(b => b.date    === req.query.date);
-  if (req.query.routeId) result = result.filter(b => b.routeId === req.query.routeId);
-
-  const enriched = result
-    .map(b => ({ ...b, route: routes.find(r => r.id === b.routeId) || null }))
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  res.json(enriched);
 });
 
 /* ── GET ONE BOOKING ── */
-router.get("/:id", verifyToken, (req, res) => {
-  const bookings = readDB("bookings");
-  const booking  = bookings.find(b => b.id === req.params.id);
-  if (!booking) return res.status(404).json({ message: "Booking not found." });
+router.get("/:id", verifyToken, async (req, res) => {
+  try {
+    const booking = await Booking.findOne({ id: req.params.id });
+    if (!booking) return res.status(404).json({ message: "Booking not found." });
 
-  // Staff can only see their own
-  if (!OPS_ROLES.includes(req.user.role) && booking.userId !== req.user.id) {
-    return res.status(403).json({ message: "Access denied." });
+    if (!OPS_ROLES.includes(req.user.role) && booking.userId !== req.user.id)
+      return res.status(403).json({ message: "Access denied." });
+
+    res.json(booking);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch booking." });
   }
-
-  const routes = readDB("routes");
-  res.json({ ...booking, route: routes.find(r => r.id === booking.routeId) || null });
 });
 
-/* ── CREATE BOOKING (staff + admin) ── */
-router.post("/", verifyToken, (req, res) => {
-  const { routeId, passengerName, departure, date, seats, paymentMethod } = req.body;
-  const seatsArray = Array.isArray(seats) ? seats : [seats].filter(Boolean);
+/* ── CREATE BOOKING ── */
+router.post("/", verifyToken, async (req, res) => {
+  try {
+    const { routeId, passengerName, departure, date, seats, paymentMethod } = req.body;
+    const seatsArray = Array.isArray(seats) ? seats : [seats].filter(Boolean);
 
-  if (!routeId || !passengerName || !departure || !date || seatsArray.length === 0) {
-    return res.status(400).json({ message: "routeId, passengerName, departure, date, and seats are required." });
-  }
-  if (seatsArray.length > MAX_SEATS) {
-    return res.status(400).json({ message: `Maximum ${MAX_SEATS} seats per booking.` });
-  }
+    if (!routeId || !passengerName || !departure || !date || seatsArray.length === 0)
+      return res.status(400).json({ message: "routeId, passengerName, departure, date, and seats are required." });
 
-  const routes   = readDB("routes");
-  const bookings = readDB("bookings");
-  const route    = routes.find(r => r.id === routeId);
+    if (seatsArray.length > MAX_SEATS)
+      return res.status(400).json({ message: `Maximum ${MAX_SEATS} seats per booking.` });
 
-  if (!route)                    return res.status(404).json({ message: "Route not found." });
-  if (route.status !== "active") return res.status(400).json({ message: "This route is not active." });
+    const route = await Route.findOne({ id: routeId });
+    if (!route)                    return res.status(404).json({ message: "Route not found." });
+    if (route.status !== "active") return res.status(400).json({ message: "This route is not active." });
 
-  // ── Prevent duplicate booking: one booking per user per day ──
-  const existingBooking = bookings.find(b =>
-    b.userId === req.user.id &&
-    b.date   === date &&
-    b.status !== "cancelled" &&
-    b.status !== "refunded"
-  );
-  if (existingBooking) {
-    return res.status(409).json({
-      message: "You already have a booking for today. Please edit or cancel your existing booking.",
-      bookingRef: existingBooking.bookingRef,
+    // Prevent duplicate booking: one booking per user per day
+    const existing = await Booking.findOne({
+      userId: req.user.id,
+      date,
+      status: { $nin: ["cancelled", "refunded"] },
     });
+    if (existing) {
+      return res.status(409).json({
+        message: "You already have a booking for today. Please edit or cancel your existing booking.",
+        bookingRef: existing.bookingRef,
+      });
+    }
+
+    // Check seat conflicts
+    const takenBookings = await Booking.find({
+      routeId, date, departure,
+      status: { $nin: ["cancelled", "refunded"] },
+    });
+    const takenSeats = takenBookings.flatMap(b => b.seats?.length ? b.seats : [b.seat]).filter(Boolean);
+    const conflict = seatsArray.find(s => takenSeats.includes(Number(s)));
+    if (conflict)
+      return res.status(409).json({ message: `Seat ${conflict} is already booked.` });
+
+    const count = await Booking.countDocuments();
+    const ref   = `OGA-${new Date().getFullYear()}-${String(count + 1).padStart(4, "0")}`;
+
+    const newBooking = await Booking.create({
+      id:            `bk-${uuidv4().slice(0, 6)}`,
+      userId:        req.user.id,
+      passengerName,
+      routeId,
+      from:          route.from,
+      to:            route.to,
+      fromTerminal:  route.fromTerminal,
+      toTerminal:    route.toTerminal,
+      departure,
+      date,
+      seats:         seatsArray.map(Number),
+      seat:          seatsArray[0],
+      price:         route.price * seatsArray.length,
+      pricePerSeat:  route.price,
+      seatCount:     seatsArray.length,
+      status:        "confirmed",
+      paymentMethod: paymentMethod || "card",
+      paymentStatus: "paid",
+      bookingRef:    ref,
+    });
+
+    res.status(201).json({ message: "Booking confirmed!", booking: newBooking });
+  } catch (err) {
+    res.status(500).json({ message: "Booking failed. Please try again." });
   }
-
-  // Check taken seats
-  const takenSeats = bookings
-    .filter(b =>
-      b.routeId   === routeId &&
-      b.date      === date &&
-      b.departure === departure &&
-      b.status    !== "cancelled" &&
-      b.status    !== "refunded"
-    )
-    .flatMap(b => b.seats || [b.seat])
-    .filter(Boolean);
-
-  const conflict = seatsArray.find(s => takenSeats.includes(Number(s)));
-  if (conflict) {
-    return res.status(409).json({ message: `Seat ${conflict} is already booked.` });
-  }
-
-  const ref = `OGA-${new Date().getFullYear()}-${String(bookings.length + 1).padStart(4, "0")}`;
-
-  const newBooking = {
-    id:            `bk-${uuidv4().slice(0, 6)}`,
-    userId:        req.user.id,
-    passengerName,
-    routeId,
-    from:          route.from,
-    to:            route.to,
-    fromTerminal:  route.fromTerminal,
-    toTerminal:    route.toTerminal,
-    departure,
-    date,
-    seats:         seatsArray.map(Number),
-    seat:          seatsArray[0],
-    price:         route.price * seatsArray.length,
-    pricePerSeat:  route.price,
-    seatCount:     seatsArray.length,
-    status:        "confirmed",
-    paymentMethod: paymentMethod || "card",
-    paymentStatus: "paid",
-    bookingRef:    ref,
-    createdAt:     new Date().toISOString(),
-  };
-
-  bookings.push(newBooking);
-  writeDB("bookings", bookings);
-  res.status(201).json({ message: "Booking confirmed!", booking: newBooking });
 });
 
-/* ── UPDATE SEATS (staff — own booking only, before 2PM) ── */
-router.patch("/:id", verifyToken, (req, res) => {
-  const { seats } = req.body;
-  const seatsArray = Array.isArray(seats) ? seats : [seats].filter(Boolean);
+/* ── UPDATE SEATS (staff — own booking, before 2PM) ── */
+router.patch("/:id", verifyToken, async (req, res) => {
+  try {
+    const { seats } = req.body;
+    const seatsArray = Array.isArray(seats) ? seats : [seats].filter(Boolean);
+    if (seatsArray.length === 0)
+      return res.status(400).json({ message: "seats are required." });
 
-  if (seatsArray.length === 0) {
-    return res.status(400).json({ message: "seats are required." });
+    const booking = await Booking.findOne({ id: req.params.id });
+    if (!booking) return res.status(404).json({ message: "Booking not found." });
+
+    if (!OPS_ROLES.includes(req.user.role) && booking.userId !== req.user.id)
+      return res.status(403).json({ message: "Access denied." });
+
+    // Enforce 2PM cutoff for non-admins
+    const now    = new Date();
+    const cutoff = new Date();
+    cutoff.setHours(14, 0, 0, 0);
+    if (now >= cutoff && !OPS_ROLES.includes(req.user.role))
+      return res.status(403).json({ message: "Bookings cannot be edited after 2:00 PM." });
+
+    // Check seat conflicts excluding current booking
+    const takenBookings = await Booking.find({
+      routeId:   booking.routeId,
+      date:      booking.date,
+      departure: booking.departure,
+      status:    { $nin: ["cancelled", "refunded"] },
+      id:        { $ne: booking.id },
+    });
+    const takenSeats = takenBookings.flatMap(b => b.seats?.length ? b.seats : [b.seat]).filter(Boolean);
+    const conflict = seatsArray.find(s => takenSeats.includes(Number(s)));
+    if (conflict)
+      return res.status(409).json({ message: `Seat ${conflict} is already booked.` });
+
+    booking.seats     = seatsArray.map(Number);
+    booking.seat      = seatsArray[0];
+    booking.seatCount = seatsArray.length;
+    await booking.save();
+
+    res.json({ message: "Seat updated successfully.", booking });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update seat." });
   }
-
-  const bookings = readDB("bookings");
-  const index    = bookings.findIndex(b => b.id === req.params.id);
-
-  if (index === -1) return res.status(404).json({ message: "Booking not found." });
-
-  const booking = bookings[index];
-
-  // Staff can only edit their own booking
-  if (!OPS_ROLES.includes(req.user.role) && booking.userId !== req.user.id) {
-    return res.status(403).json({ message: "Access denied." });
-  }
-
-  // // Enforce 2PM cutoff
-  // const now     = new Date();
-  // const cutoff  = new Date();
-  // cutoff.setHours(14, 0, 0, 0);
-  // if (now >= cutoff && !OPS_ROLES.includes(req.user.role)) {
-  //   return res.status(403).json({ message: "Bookings cannot be edited after 2:00 PM." });
-  // }
-
-  // Check new seats aren't taken by someone else
-  const takenSeats = bookings
-    .filter(b =>
-      b.routeId   === booking.routeId &&
-      b.date      === booking.date &&
-      b.departure === booking.departure &&
-      b.status    !== "cancelled" &&
-      b.status    !== "refunded" &&
-      b.id        !== booking.id  // exclude current booking
-    )
-    .flatMap(b => b.seats || [b.seat])
-    .filter(Boolean);
-
-  const conflict = seatsArray.find(s => takenSeats.includes(Number(s)));
-  if (conflict) {
-    return res.status(409).json({ message: `Seat ${conflict} is already booked.` });
-  }
-
-  // Update seats
-  bookings[index].seats    = seatsArray.map(Number);
-  bookings[index].seat     = seatsArray[0];
-  bookings[index].seatCount = seatsArray.length;
-  bookings[index].updatedAt = new Date().toISOString();
-
-  writeDB("bookings", bookings);
-  res.json({ message: "Seat updated successfully.", booking: bookings[index] });
 });
 
 /* ── UPDATE STATUS (admin only) ── */
-router.patch("/:id/status", verifyToken, requireRole(OPS_ROLES), (req, res) => {
-  const { status } = req.body;
-  const valid = ["confirmed", "cancelled", "refunded", "pending"];
-  if (!valid.includes(status)) {
-    return res.status(400).json({ message: `Status must be: ${valid.join(", ")}` });
+router.patch("/:id/status", verifyToken, requireRole(OPS_ROLES), async (req, res) => {
+  try {
+    const { status } = req.body;
+    const valid = ["confirmed", "cancelled", "refunded", "pending"];
+    if (!valid.includes(status))
+      return res.status(400).json({ message: `Status must be: ${valid.join(", ")}` });
+
+    const booking = await Booking.findOne({ id: req.params.id });
+    if (!booking) return res.status(404).json({ message: "Booking not found." });
+
+    booking.status = status;
+    if (status === "refunded") booking.paymentStatus = "refunded";
+    await booking.save();
+
+    res.json({ message: `Booking ${status}.`, booking });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update booking status." });
   }
-
-  const bookings = readDB("bookings");
-  const index    = bookings.findIndex(b => b.id === req.params.id);
-  if (index === -1) return res.status(404).json({ message: "Booking not found." });
-
-  bookings[index].status = status;
-  if (status === "refunded") bookings[index].paymentStatus = "refunded";
-  writeDB("bookings", bookings);
-
-  res.json({ message: `Booking ${status}.`, booking: bookings[index] });
 });
 
 /* ── DELETE / CANCEL BOOKING ── */
-router.delete("/:id", verifyToken, (req, res) => {
-  const bookings = readDB("bookings");
-  const index    = bookings.findIndex(b => b.id === req.params.id);
+router.delete("/:id", verifyToken, async (req, res) => {
+  try {
+    const booking = await Booking.findOne({ id: req.params.id });
+    if (!booking) return res.status(404).json({ message: "Booking not found." });
 
-  if (index === -1) return res.status(404).json({ message: "Booking not found." });
+    if (!OPS_ROLES.includes(req.user.role) && booking.userId !== req.user.id)
+      return res.status(403).json({ message: "Access denied." });
 
-  const booking = bookings[index];
-
-  // Staff can only cancel their own
-  if (!OPS_ROLES.includes(req.user.role) && booking.userId !== req.user.id) {
-    return res.status(403).json({ message: "Access denied." });
+    booking.status = "cancelled";
+    await booking.save();
+    res.json({ message: "Booking cancelled." });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to cancel booking." });
   }
-
-  bookings[index].status = "cancelled";
-  writeDB("bookings", bookings);
-  res.json({ message: "Booking cancelled." });
 });
 
 export default router;

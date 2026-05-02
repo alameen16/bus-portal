@@ -1,295 +1,265 @@
 /**
- * routes/drivers.js — Drivers API
- *
- * GET    /api/drivers              → all drivers (admin)
- * GET    /api/drivers/me           → logged-in driver's own profile
- * GET    /api/drivers/:id          → one driver
- * GET    /api/drivers/:id/schedule → driver's schedule for today (driver portal)
- * POST   /api/drivers              → add a driver + auto-creates login account
- * PUT    /api/drivers/:id          → update driver
- * DELETE /api/drivers/:id          → remove driver (superadmin)
- * PATCH  /api/drivers/:id/status   → on-duty / off-duty / suspended
+ * routes/drivers.js — Drivers API (MongoDB version)
  */
 
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
-import { readDB, writeDB } from "../utils/db.js";
+import Driver from "../models/Driver.js";
+import User from "../models/User.js";
+import Bus from "../models/Bus.js";
+import Route from "../models/Route.js";
+import Booking from "../models/Booking.js";
 import { verifyToken, requireRole } from "../middleware/auth.js";
 
 const router = Router();
-const ADMIN_ROLES = ["superadmin", "operations"];
-
+const ADMIN_ROLES = ["superadmin", "localAdmin"];
 
 /* ── GET ALL DRIVERS ── */
-router.get("/", verifyToken, requireRole(ADMIN_ROLES), (req, res) => {
-  const drivers = readDB("drivers");
-  const buses   = readDB("buses");
-  const routes  = readDB("routes");
+router.get("/", verifyToken, requireRole(ADMIN_ROLES), async (req, res) => {
+  try {
+    const drivers = await Driver.find();
+    const buses   = await Bus.find();
+    const routes  = await Route.find();
 
-  const enriched = drivers.map(driver => ({
-    ...driver,
-    bus:   buses.find(b  => b.id === driver.assignedBusId)   || null,
-    route: routes.find(r => r.id === driver.assignedRouteId) || null,
-  }));
+    const enriched = drivers.map(driver => ({
+      ...driver.toObject(),
+      bus:   buses.find(b  => b.id === driver.assignedBusId)   || null,
+      route: routes.find(r => r.id === driver.assignedRouteId) || null,
+    }));
 
-  res.json(enriched);
-});
-
-
-/* ── GET MY DRIVER PROFILE (for logged-in driver) ── */
-// Must be defined BEFORE /:id so Express doesn't treat "me" as an ID
-router.get("/me", verifyToken, (req, res) => {
-  const drivers = readDB("drivers");
-  const driver  = drivers.find(d => d.userId === req.user.id || d.email === req.user.email);
-
-  if (!driver) {
-    return res.status(404).json({ message: "No driver profile found for your account. Contact admin." });
+    res.json(enriched);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch drivers." });
   }
-
-  const buses  = readDB("buses");
-  const routes = readDB("routes");
-
-  res.json({
-    ...driver,
-    bus:   buses.find(b  => b.id === driver.assignedBusId)   || null,
-    route: routes.find(r => r.id === driver.assignedRouteId) || null,
-  });
 });
 
+/* ── GET MY DRIVER PROFILE ── */
+router.get("/me", verifyToken, async (req, res) => {
+  try {
+    const driver = await Driver.findOne({
+      $or: [{ userId: req.user.id }, { email: req.user.email }],
+    });
+
+    if (!driver)
+      return res.status(404).json({ message: "No driver profile found for your account. Contact admin." });
+
+    const buses  = await Bus.find();
+    const routes = await Route.find();
+
+    res.json({
+      ...driver.toObject(),
+      bus:   buses.find(b  => b.id === driver.assignedBusId)   || null,
+      route: routes.find(r => r.id === driver.assignedRouteId) || null,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch driver profile." });
+  }
+});
 
 /* ── GET ONE DRIVER ── */
-router.get("/:id", verifyToken, (req, res) => {
-  const drivers = readDB("drivers");
-  const buses   = readDB("buses");
-  const routes  = readDB("routes");
+router.get("/:id", verifyToken, async (req, res) => {
+  try {
+    const driver = await Driver.findOne({ id: req.params.id });
+    if (!driver) return res.status(404).json({ message: "Driver not found." });
 
-  const driver = drivers.find(d => d.id === req.params.id);
-  if (!driver) return res.status(404).json({ message: "Driver not found." });
+    if (req.user.role === "driver" && driver.userId !== req.user.id)
+      return res.status(403).json({ message: "Access denied." });
 
-  // Drivers can only view their own profile
-  if (req.user.role === "driver" && driver.userId !== req.user.id) {
-    return res.status(403).json({ message: "Access denied." });
-  }
+    const buses  = await Bus.find();
+    const routes = await Route.find();
 
-  res.json({
-    ...driver,
-    bus:   buses.find(b  => b.id === driver.assignedBusId)   || null,
-    route: routes.find(r => r.id === driver.assignedRouteId) || null,
-  });
-});
-
-
-/* ── GET DRIVER SCHEDULE (used by the Driver Portal) ──
-   Returns today's trips, route details, bus info,
-   and passenger count for this driver
-*/
-router.get("/:id/schedule", verifyToken, (req, res) => {
-  const drivers  = readDB("drivers");
-  const buses    = readDB("buses");
-  const routes   = readDB("routes");
-  const bookings = readDB("bookings");
-
-  const driver = drivers.find(d => d.id === req.params.id);
-  if (!driver) return res.status(404).json({ message: "Driver not found." });
-
-  // Security: drivers can only see their own schedule
-  if (req.user.role === "driver" && driver.userId !== req.user.id) {
-    return res.status(403).json({ message: "Access denied." });
-  }
-
-  const assignedRoute = routes.find(r => r.id === driver.assignedRouteId) || null;
-  const assignedBus   = buses.find(b  => b.id === driver.assignedBusId)   || null;
-
-  // Get today's date string (YYYY-MM-DD)
-  const today = new Date().toISOString().split("T")[0];
-
-  // Get today's bookings for this route
-  const todayBookings = bookings.filter(b =>
-    b.routeId === driver.assignedRouteId &&
-    b.date    === today &&
-    b.status  === "confirmed"
-  );
-
-  // Build a schedule from the route's departure times
-  const schedule = assignedRoute
-    ? assignedRoute.departures.map(time => ({
-        time,
-        passengers: todayBookings.filter(b => b.departure === time).length,
-        capacity:   assignedBus?.capacity || 45,
-      }))
-    : [];
-
-  res.json({
-    driver,
-    assignedRoute,
-    assignedBus,
-    todayDate: today,
-    schedule,
-    totalPassengersToday: todayBookings.length,
-    totalTripsToday: schedule.length,
-  });
-});
-
-
-/* ── ADD A DRIVER ──
-   Also auto-creates a user login account for the driver.
-   Required body fields: name, email, phone, licenseNumber, password
-*/
-router.post("/", verifyToken, requireRole(ADMIN_ROLES), async (req, res) => {
-  const {
-    name, email, phone, licenseNumber,
-    licenseExpiry, emergencyContact, password
-  } = req.body;
-
-  if (!name || !email || !phone || !licenseNumber || !password) {
-    return res.status(400).json({
-      message: "name, email, phone, licenseNumber, and password are required."
+    res.json({
+      ...driver.toObject(),
+      bus:   buses.find(b  => b.id === driver.assignedBusId)   || null,
+      route: routes.find(r => r.id === driver.assignedRouteId) || null,
     });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch driver." });
   }
-
-  const drivers = readDB("drivers");
-  const users   = readDB("users");
-
-  // Check for duplicate license
-  if (drivers.find(d => d.licenseNumber === licenseNumber)) {
-    return res.status(409).json({ message: "A driver with this license number already exists." });
-  }
-
-  // Check for duplicate email across all users
-  if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-    return res.status(409).json({ message: "A user with this email already exists." });
-  }
-
-  // Hash the password
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  // Create the user login account
-  const newUserId = `u-${uuidv4().slice(0, 6)}`;
-  const newUser = {
-    id:        newUserId,
-    name,
-    email,
-    password:  hashedPassword,
-    role:      "driver",
-    phone:     phone || "",
-    avatar:    name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase(),
-    status:    "active",
-    createdAt: new Date().toISOString(),
-  };
-
-  // Create the driver profile, linked to the new user account
-  const newDriver = {
-    id:               `drv-${uuidv4().slice(0, 6)}`,
-    userId:           newUserId,   // linked to login account
-    name,
-    email,
-    phone,
-    licenseNumber,
-    licenseExpiry:    licenseExpiry    || null,
-    assignedBusId:    null,
-    assignedRouteId:  null,
-    status:           "off-duty",
-    rating:           0,
-    totalTrips:       0,
-    joinDate:         new Date().toISOString().split("T")[0],
-    avatar:           name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase(),
-    emergencyContact: emergencyContact || "",
-    createdAt:        new Date().toISOString(),
-  };
-
-  // Save both
-  users.push(newUser);
-  drivers.push(newDriver);
-  writeDB("users",   users);
-  writeDB("drivers", drivers);
-
-  res.status(201).json({
-    message: "Driver added successfully. Login account created.",
-    driver: newDriver,
-    login: {
-      email,
-      // Return the plain password once so admin can share it with the driver
-      // In production you'd send this via email instead
-      temporaryPassword: password,
-    },
-  });
 });
 
+/* ── GET DRIVER SCHEDULE ── */
+router.get("/:id/schedule", verifyToken, async (req, res) => {
+  try {
+    const driver = await Driver.findOne({ id: req.params.id });
+    if (!driver) return res.status(404).json({ message: "Driver not found." });
+
+    if (req.user.role === "driver" && driver.userId !== req.user.id)
+      return res.status(403).json({ message: "Access denied." });
+
+    const assignedRoute = driver.assignedRouteId
+      ? await Route.findOne({ id: driver.assignedRouteId })
+      : null;
+    const assignedBus = driver.assignedBusId
+      ? await Bus.findOne({ id: driver.assignedBusId })
+      : null;
+
+    const today = new Date().toISOString().split("T")[0];
+
+    const todayBookings = await Booking.find({
+      routeId: driver.assignedRouteId,
+      date:    today,
+      status:  "confirmed",
+    });
+
+    const schedule = assignedRoute
+      ? assignedRoute.departures.map(time => ({
+          time,
+          passengers: todayBookings.filter(b => b.departure === time).length,
+          capacity:   assignedBus?.capacity || 45,
+        }))
+      : [];
+
+    res.json({
+      driver,
+      assignedRoute,
+      assignedBus,
+      todayDate:            today,
+      schedule,
+      totalPassengersToday: todayBookings.length,
+      totalTripsToday:      schedule.length,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch schedule." });
+  }
+});
+
+/* ── ADD A DRIVER ── */
+router.post("/", verifyToken, requireRole(ADMIN_ROLES), async (req, res) => {
+  try {
+    const { name, email, phone, licenseNumber, licenseExpiry, emergencyContact, password } = req.body;
+
+    if (!name || !email || !phone || !licenseNumber || !password)
+      return res.status(400).json({ message: "name, email, phone, licenseNumber, and password are required." });
+
+    const existingDriver = await Driver.findOne({ licenseNumber });
+    if (existingDriver)
+      return res.status(409).json({ message: "A driver with this license number already exists." });
+
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser)
+      return res.status(409).json({ message: "A user with this email already exists." });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUserId = `u-${uuidv4().slice(0, 6)}`;
+    const avatar = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+
+    // Create user login account
+    await User.create({
+      id:       newUserId,
+      name,
+      email:    email.toLowerCase(),
+      password: hashedPassword,
+      role:     "driver",
+      phone:    phone || "",
+      avatar,
+      status:   "active",
+    });
+
+    // Create driver profile
+    const newDriver = await Driver.create({
+      id:               `drv-${uuidv4().slice(0, 6)}`,
+      userId:           newUserId,
+      name,
+      email:            email.toLowerCase(),
+      phone,
+      licenseNumber,
+      licenseExpiry:    licenseExpiry    || null,
+      assignedBusId:    null,
+      assignedRouteId:  null,
+      status:           "off-duty",
+      rating:           0,
+      totalTrips:       0,
+      joinDate:         new Date().toISOString().split("T")[0],
+      avatar,
+      emergencyContact: emergencyContact || "",
+    });
+
+    res.status(201).json({
+      message: "Driver added successfully. Login account created.",
+      driver: newDriver,
+      login: { email, temporaryPassword: password },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to add driver." });
+  }
+});
 
 /* ── UPDATE A DRIVER ── */
-router.put("/:id", verifyToken, requireRole(ADMIN_ROLES), (req, res) => {
-  const drivers = readDB("drivers");
-  const index   = drivers.findIndex(d => d.id === req.params.id);
+router.put("/:id", verifyToken, requireRole(ADMIN_ROLES), async (req, res) => {
+  try {
+    const driver = await Driver.findOne({ id: req.params.id });
+    if (!driver) return res.status(404).json({ message: "Driver not found." });
 
-  if (index === -1) return res.status(404).json({ message: "Driver not found." });
+    // Sync name/phone/email to linked user account
+    if (driver.userId) {
+      const updates = {};
+      if (req.body.name)  updates.name  = req.body.name;
+      if (req.body.email) updates.email = req.body.email.toLowerCase();
+      if (req.body.phone) updates.phone = req.body.phone;
+      if (Object.keys(updates).length > 0) {
+        await User.findOneAndUpdate({ id: driver.userId }, updates);
+      }
+    }
 
-  // Also sync name/phone/email update to the linked user account
-  const users     = readDB("users");
-  const userIndex = users.findIndex(u => u.id === drivers[index].userId);
-  if (userIndex !== -1) {
-    if (req.body.name)  users[userIndex].name  = req.body.name;
-    if (req.body.email) users[userIndex].email = req.body.email;
-    if (req.body.phone) users[userIndex].phone = req.body.phone;
-    writeDB("users", users);
+    Object.assign(driver, req.body, { id: req.params.id });
+    await driver.save();
+
+    res.json({ message: "Driver updated.", driver });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update driver." });
   }
-
-  drivers[index] = { ...drivers[index], ...req.body, id: req.params.id };
-  writeDB("drivers", drivers);
-
-  res.json({ message: "Driver updated.", driver: drivers[index] });
 });
-
 
 /* ── CHANGE DRIVER STATUS ── */
-router.patch("/:id/status", verifyToken, requireRole(ADMIN_ROLES), (req, res) => {
-  const { status } = req.body;
-  const validStatuses = ["on-duty", "off-duty", "suspended"];
+router.patch("/:id/status", verifyToken, requireRole(ADMIN_ROLES), async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ["on-duty", "off-duty", "suspended"];
 
-  if (!validStatuses.includes(status)) {
-    return res.status(400).json({ message: `Status must be: ${validStatuses.join(", ")}` });
-  }
+    if (!validStatuses.includes(status))
+      return res.status(400).json({ message: `Status must be: ${validStatuses.join(", ")}` });
 
-  const drivers = readDB("drivers");
-  const index   = drivers.findIndex(d => d.id === req.params.id);
+    const driver = await Driver.findOne({ id: req.params.id });
+    if (!driver) return res.status(404).json({ message: "Driver not found." });
 
-  if (index === -1) return res.status(404).json({ message: "Driver not found." });
+    driver.status = status;
+    await driver.save();
 
-  drivers[index].status = status;
-
-  // Sync suspension/reactivation to the login account
-  const users     = readDB("users");
-  const userIndex = users.findIndex(u => u.id === drivers[index].userId);
-  if (userIndex !== -1) {
-    if (status === "suspended") {
-      users[userIndex].status = "suspended";
-    } else if (users[userIndex].status === "suspended") {
-      // Only reactivate if they were suspended — don't override other states
-      users[userIndex].status = "active";
+    // Sync suspension/reactivation to login account
+    if (driver.userId) {
+      if (status === "suspended") {
+        await User.findOneAndUpdate({ id: driver.userId }, { status: "suspended" });
+      } else {
+        const user = await User.findOne({ id: driver.userId });
+        if (user?.status === "suspended") {
+          await User.findOneAndUpdate({ id: driver.userId }, { status: "active" });
+        }
+      }
     }
-    writeDB("users", users);
-  }
 
-  writeDB("drivers", drivers);
-  res.json({ message: `Driver status updated to "${status}".`, driver: drivers[index] });
+    res.json({ message: `Driver status updated to "${status}".`, driver });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update driver status." });
+  }
 });
 
-
 /* ── DELETE A DRIVER ── */
-router.delete("/:id", verifyToken, requireRole(["superadmin"]), (req, res) => {
-  const drivers = readDB("drivers");
-  const driver  = drivers.find(d => d.id === req.params.id);
+router.delete("/:id", verifyToken, requireRole(["superadmin"]), async (req, res) => {
+  try {
+    const driver = await Driver.findOne({ id: req.params.id });
+    if (!driver) return res.status(404).json({ message: "Driver not found." });
 
-  if (!driver) return res.status(404).json({ message: "Driver not found." });
+    if (driver.userId) {
+      await User.deleteOne({ id: driver.userId });
+    }
 
-  // Also delete the linked user login account
-  if (driver.userId) {
-    const users = readDB("users");
-    writeDB("users", users.filter(u => u.id !== driver.userId));
+    await Driver.deleteOne({ id: req.params.id });
+    res.json({ message: "Driver and login account removed successfully." });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to delete driver." });
   }
-
-  writeDB("drivers", drivers.filter(d => d.id !== req.params.id));
-  res.json({ message: "Driver and login account removed successfully." });
 });
 
 export default router;

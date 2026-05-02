@@ -2,10 +2,11 @@
  * pages/LoginPage.jsx — Unified Login Page
  *
  * One login form for ALL user types.
+ * Supports login with email OR phone number.
  * After login, the app automatically redirects based on role:
- *   superadmin / operations / finance → Admin Dashboard
- *   driver                            → Driver Dashboard
- *   user                              → Home Page
+ *   superadmin / localAdmin → Admin Dashboard
+ *   driver                  → Driver Dashboard
+ *   staff                   → Home Page
  */
 
 import { useState } from "react";
@@ -26,16 +27,13 @@ export default function LoginPage({ setCurrentPage }) {
     setLoading(true);
 
     try {
-      // Call backend login — returns user with role
       const user = await login(email, password);
 
-      // Redirect based on role
       if (["superadmin", "localAdmin"].includes(user.role)) {
-        setCurrentPage("AdminStaff"); // ← lands on Staff Management
+        setCurrentPage("AdminStaff");
       } else if (user.role === "driver") {
         setCurrentPage("DriverDashboard");
       } else {
-        // staff → public site (book tickets, view own bookings)
         setCurrentPage("Home");
       }
     } catch (err) {
@@ -43,19 +41,6 @@ export default function LoginPage({ setCurrentPage }) {
     } finally {
       setLoading(false);
     }
-  }
-
-  // Quick-fill demo credentials
-  function fillDemo(role) {
-    const creds = {
-      superadmin: { email: "admin@ogatransit.ng",   password: "password" },
-      localAdmin:  { email: "ops@ogatransit.ng",     password: "password" },
-      staff:       { email: "user@ogatransit.ng",    password: "password" },
-      driver:      { email: "driver1@ogatransit.ng", password: "password" },
-    };
-    setEmail(creds[role].email);
-    setPassword(creds[role].password);
-    setError("");
   }
 
   return (
@@ -92,16 +77,16 @@ export default function LoginPage({ setCurrentPage }) {
           {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-4">
 
-            {/* Email */}
+            {/* Email or Phone */}
             <div>
               <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">
-                Email Address
+                Email or Phone Number
               </label>
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="you@ogatransit.ng"
+                placeholder="Email or phone number"
                 required
                 className="w-full border border-stone-200 rounded-lg px-4 py-2.5 text-sm text-stone-800 bg-stone-50 focus:outline-none focus:border-green-500 transition-colors"
               />
@@ -141,29 +126,6 @@ export default function LoginPage({ setCurrentPage }) {
             </button>
 
           </form>
-
-          {/* Demo credentials */}
-          <div className="mt-6 pt-5 border-t border-stone-100">
-            <p className="text-xs text-stone-400 font-semibold uppercase tracking-wider mb-3">
-              Demo Accounts — click to fill:
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { role: "superadmin", label: "Super Admin", color: "bg-purple-50 text-purple-700 border-purple-200" },
-                { role: "localAdmin", label: "Local Admin",  color: "bg-blue-50 text-blue-700 border-blue-200" },
-                { role: "driver",     label: "Driver",       color: "bg-green-50 text-green-700 border-green-200" },
-                { role: "staff",      label: "Staff",        color: "bg-stone-50 text-stone-600 border-stone-200" },
-              ].map(d => (
-                <button
-                  key={d.role}
-                  onClick={() => fillDemo(d.role)}
-                  className={`text-xs font-semibold px-3 py-2 rounded-lg border transition-colors hover:opacity-80 ${d.color}`}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
-          </div>
 
         </div>
 

@@ -72,9 +72,14 @@ export default function Navbar({ currentPage, setCurrentPage }) {
                 </button>
               )}
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-green-700 flex items-center justify-center text-white text-xs font-bold">
+                {/* Avatar — clicks to Profile page */}
+                <button
+                  onClick={() => handleNav("Profile")}
+                  title="My Profile"
+                  className="w-8 h-8 rounded-full bg-green-700 flex items-center justify-center text-white text-xs font-bold hover:bg-green-800 transition-colors"
+                >
                   {user.avatar}
-                </div>
+                </button>
                 <button
                   onClick={handleLogout}
                   className="text-sm font-semibold text-red-500 hover:text-red-700 transition-colors"
@@ -104,9 +109,13 @@ export default function Navbar({ currentPage, setCurrentPage }) {
         {/* Mobile right side — avatar/login + hamburger */}
         <div className="flex md:hidden items-center gap-3">
           {user ? (
-            <div className="w-8 h-8 rounded-full bg-green-700 flex items-center justify-center text-white text-xs font-bold">
+            <button
+              onClick={() => handleNav("Profile")}
+              title="My Profile"
+              className="w-8 h-8 rounded-full bg-green-700 flex items-center justify-center text-white text-xs font-bold hover:bg-green-800 transition-colors"
+            >
               {user.avatar}
-            </div>
+            </button>
           ) : (
             <button
               onClick={() => handleNav("Login")}
@@ -123,12 +132,10 @@ export default function Navbar({ currentPage, setCurrentPage }) {
             aria-label="Toggle menu"
           >
             {menuOpen ? (
-              // X icon
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             ) : (
-              // Hamburger icon
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
@@ -157,6 +164,16 @@ export default function Navbar({ currentPage, setCurrentPage }) {
               </button>
             );
           })}
+
+          {/* Profile link in mobile menu */}
+          {user && (
+            <button
+              onClick={() => handleNav("Profile")}
+              className="text-left text-sm font-medium py-3 px-3 rounded-lg text-stone-600 hover:bg-stone-50 hover:text-green-700 transition-colors"
+            >
+              My Profile
+            </button>
+          )}
 
           {/* Admin portal link in mobile menu */}
           {(isAdmin || !user) && (
