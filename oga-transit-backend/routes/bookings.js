@@ -156,12 +156,12 @@ router.patch("/:id", verifyToken, async (req, res) => {
     if (!OPS_ROLES.includes(req.user.role) && booking.userId !== req.user.id)
       return res.status(403).json({ message: "Access denied." });
 
-    // Enforce 2PM cutoff for non-admins
-    const now    = new Date();
-    const cutoff = new Date();
-    cutoff.setHours(14, 0, 0, 0);
-    if (now >= cutoff && !OPS_ROLES.includes(req.user.role))
-      return res.status(403).json({ message: "Bookings cannot be edited after 2:00 PM." });
+    // // Enforce 2PM cutoff for non-admins
+    // const now    = new Date();
+    // const cutoff = new Date();
+    // cutoff.setHours(14, 0, 0, 0);
+    // if (now >= cutoff && !OPS_ROLES.includes(req.user.role))
+    //   return res.status(403).json({ message: "Bookings cannot be edited after 2:00 PM." });
 
     // Check seat conflicts excluding current booking
     const takenBookings = await Booking.find({
