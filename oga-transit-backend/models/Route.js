@@ -16,6 +16,8 @@ const routeSchema = new mongoose.Schema({
   price:        { type: Number, default: 0 },
   status:       { type: String, enum: ["active", "inactive"], default: "active" },
   busId:        { type: String, default: null },
+  driverId:     { type: String, default: null },
+  distance:     { type: String, default: "" },
 }, { timestamps: true });
 
 export default mongoose.model("Route", routeSchema);
