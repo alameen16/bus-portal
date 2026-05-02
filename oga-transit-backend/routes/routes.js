@@ -19,7 +19,7 @@ router.get("/search", async (req, res) => {
     const normFrom = (from || "").toLowerCase().trim();
     const normTo   = (to   || "").toLowerCase().trim();
 
-    const active = await Route.find({ status: "active" });
+    const active  = await Route.find({ status: "active" });
     const buses   = await Bus.find();
     const drivers = await Driver.find();
 
@@ -174,10 +174,14 @@ router.put("/:id", verifyToken, requireRole(ADMIN_ROLES), async (req, res) => {
       );
     }
 
-    Object.assign(route, req.body, { id: req.params.id });
-    await route.save();
+    // Use findOneAndUpdate to ensure all fields are saved correctly
+    const updatedRoute = await Route.findOneAndUpdate(
+      { id: req.params.id },
+      { ...req.body, id: req.params.id },
+      { new: true, runValidators: true }
+    );
 
-    res.json({ message: "Route updated.", route });
+    res.json({ message: "Route updated.", route: updatedRoute });
   } catch (err) {
     res.status(500).json({ message: "Failed to update route." });
   }
