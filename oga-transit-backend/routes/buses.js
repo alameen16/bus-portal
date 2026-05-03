@@ -71,8 +71,6 @@ router.post("/", verifyToken, requireRole(ADMIN_ROLES), async (req, res) => {
       status:           "active",
       assignedRouteId:  null,
       assignedDriverId: null,
-      lastMaintenance:  null,
-      nextMaintenance:  null,
       amenities:        amenities || [],
       color:            color || "Green/White",
     });

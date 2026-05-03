@@ -301,6 +301,7 @@ function DriverForm({ driver, onSaved, onClose }) {
   );
 }
 
+
 /* ══════════════════════════════════════
    BOOKINGS PAGE
 ══════════════════════════════════════ */
@@ -327,51 +328,116 @@ export function AdminBookingsPage() {
 
   const filtered = bookings.filter(b => {
     const matchStatus = filter === "all" || b.status === filter;
-    const matchSearch = search === "" || b.passengerName.toLowerCase().includes(search.toLowerCase()) || b.bookingRef.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = search === "" ||
+      b.passengerName.toLowerCase().includes(search.toLowerCase()) ||
+      b.bookingRef.toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchSearch;
   });
 
-  const statusColor = { confirmed: "bg-green-100 text-green-700", pending: "bg-amber-100 text-amber-700", cancelled: "bg-red-100 text-red-600", refunded: "bg-stone-100 text-stone-600" };
+  // Export currently filtered bookings to CSV
+  function exportCSV() {
+    const headers = ["Ref", "Staff", "Route", "Date", "Departure", "Seat", "Status"];
+    const rows = filtered.map(b => [
+      b.bookingRef,
+      b.passengerName,
+      `${b.from} → ${b.to}`,
+      b.date,
+      b.departure,
+      b.seats?.join(", ") || b.seat,
+      b.status,
+    ]);
+
+    const csv  = [headers, ...rows].map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `bookings-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const statusColor = {
+    confirmed: "bg-green-100 text-green-700",
+    cancelled: "bg-red-100 text-red-600",
+  };
 
   if (loading) return <Spinner />;
 
   return (
     <div className="space-y-5">
-      <div><h2 className="font-black text-stone-900 text-xl">Bookings</h2><p className="text-stone-500 text-sm">{bookings.length} total bookings</p></div>
+
+      {/* Header with Export CSV button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-black text-stone-900 text-xl">Bookings</h2>
+          <p className="text-stone-500 text-sm">{bookings.length} total bookings</p>
+        </div>
+        <button
+          onClick={exportCSV}
+          className="border border-green-600 text-green-700 text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-green-50 transition-colors"
+        >
+          Export CSV
+        </button>
+      </div>
+
       {error   && <Alert type="error"   message={error}   onClose={() => setError("")} />}
       {success && <Alert type="success" message={success} onClose={() => setSuccess("")} />}
 
+      {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search passenger or ref..." className="border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-green-500 flex-1 min-w-48" />
-        {["all","confirmed","pending","cancelled","refunded"].map(s => (
-          <button key={s} onClick={() => setFilter(s)} className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-colors ${filter === s ? "bg-green-700 text-white" : "bg-white border border-stone-200 text-stone-600 hover:border-green-400"}`}>{s}</button>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search staff name or ref..."
+          className="border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-green-500 flex-1 min-w-48"
+        />
+        {["all", "confirmed", "cancelled"].map(s => (
+          <button
+            key={s}
+            onClick={() => setFilter(s)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-colors ${
+              filter === s ? "bg-green-700 text-white" : "bg-white border border-stone-200 text-stone-600 hover:border-green-400"
+            }`}
+          >
+            {s}
+          </button>
         ))}
       </div>
 
       <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="bg-stone-50 border-b border-stone-100">
-              {["Ref", "Passenger", "Route", "Date", "Seat", "Amount", "Payment", "Status", "Actions"].map(h =>
-                <th key={h} className="text-left px-4 py-3 text-xs font-bold text-stone-500 uppercase tracking-wider">{h}</th>)}
-            </tr></thead>
+            <thead>
+              <tr className="bg-stone-50 border-b border-stone-100">
+                {["Ref", "Staff", "Route", "Date", "Departure", "Seat", "Status", "Actions"].map(h =>
+                  <th key={h} className="text-left px-4 py-3 text-xs font-bold text-stone-500 uppercase tracking-wider">{h}</th>
+                )}
+              </tr>
+            </thead>
             <tbody>
               {filtered.map(b => (
                 <tr key={b.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
                   <td className="px-4 py-3 font-mono text-xs text-stone-400">{b.bookingRef}</td>
                   <td className="px-4 py-3 font-semibold text-stone-900">{b.passengerName}</td>
                   <td className="px-4 py-3 text-stone-600 text-xs">{b.from} → {b.to}</td>
-                  <td className="px-4 py-3 text-stone-500 text-xs">{b.date} {b.departure}</td>
-                  <td className="px-4 py-3 text-center font-semibold">{b.seat}</td>
-                  <td className="px-4 py-3 font-bold text-green-700">₦{b.price?.toLocaleString()}</td>
-                  <td className="px-4 py-3 capitalize text-stone-500 text-xs">{b.paymentMethod}</td>
-                  <td className="px-4 py-3"><span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${statusColor[b.status]}`}>{b.status}</span></td>
+                  <td className="px-4 py-3 text-stone-500 text-xs">{b.date}</td>
+                  <td className="px-4 py-3 text-stone-500 text-xs">{b.departure}</td>
+                  <td className="px-4 py-3 text-center font-semibold">{b.seats?.join(", ") || b.seat}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      {b.status === "pending"   && <button onClick={() => updateStatus(b.id, "confirmed")} className="text-xs text-green-600 font-semibold hover:underline">Confirm</button>}
-                      {b.status !== "cancelled" && b.status !== "refunded" && <button onClick={() => updateStatus(b.id, "cancelled")} className="text-xs text-red-500 font-semibold hover:underline">Cancel</button>}
-                      {b.status === "cancelled" && <button onClick={() => updateStatus(b.id, "refunded")}  className="text-xs text-stone-500 font-semibold hover:underline">Refund</button>}
-                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${statusColor[b.status] || "bg-stone-100 text-stone-500"}`}>
+                      {b.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {b.status !== "cancelled" && (
+                      <button
+                        onClick={() => updateStatus(b.id, "cancelled")}
+                        className="text-xs text-red-500 font-semibold hover:underline"
+                      >
+                        Cancel
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -382,6 +448,7 @@ export function AdminBookingsPage() {
     </div>
   );
 }
+
 
 /* ══════════════════════════════════════
    STAFF PAGE
@@ -591,11 +658,11 @@ function ImportStaffForm({ onImported, onClose }) {
   const [fileName,  setFileName]  = useState("");
 
   function parseCSV(text) {
-    const lines = text.trim().split("\n");
+    const lines   = text.trim().split("\n");
     const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
     return lines.slice(1).map(line => {
       const values = line.split(",").map(v => v.trim());
-      const obj = {};
+      const obj    = {};
       headers.forEach((h, i) => { obj[h] = values[i] || ""; });
       return obj;
     }).filter(row => row.name || row.email);
@@ -633,11 +700,11 @@ function ImportStaffForm({ onImported, onClose }) {
   }
 
   function downloadTemplate() {
-    const csv = "name,email,phone,role\nJohn Doe,john@company.com,08012345678,staff\nJane Smith,jane@company.com,08098765432,staff";
+    const csv  = "name,email,phone,role\nJohn Doe,john@company.com,08012345678,staff\nJane Smith,jane@company.com,08098765432,staff";
     const blob = new Blob([csv], { type: "text/csv" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
-    a.href = url;
+    a.href     = url;
     a.download = "staff_import_template.csv";
     a.click();
     URL.revokeObjectURL(url);

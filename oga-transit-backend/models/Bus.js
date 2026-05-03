@@ -15,8 +15,6 @@ const busSchema = new mongoose.Schema({
   color:            { type: String, default: "Green/White" },
   assignedRouteId:  { type: String, default: null },
   assignedDriverId: { type: String, default: null },
-  lastMaintenance:  { type: String, default: null },
-  nextMaintenance:  { type: String, default: null },
 }, { timestamps: true });
 
 export default mongoose.model("Bus", busSchema);

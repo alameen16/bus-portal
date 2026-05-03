@@ -17,12 +17,8 @@ const bookingSchema = new mongoose.Schema({
   date:          { type: String, required: true },
   seats:         [{ type: Number }],
   seat:          { type: Number, default: null },
-  price:         { type: Number, default: 0 },
-  pricePerSeat:  { type: Number, default: 0 },
   seatCount:     { type: Number, default: 1 },
-  status:        { type: String, enum: ["confirmed", "cancelled", "refunded", "pending"], default: "confirmed" },
-  paymentMethod: { type: String, default: "card" },
-  paymentStatus: { type: String, default: "paid" },
+  status:        { type: String, enum: ["confirmed", "cancelled"], default: "confirmed" },
   bookingRef:    { type: String, required: true, unique: true },
   busCapacity:   { type: Number, default: 24 },
 }, { timestamps: true });
