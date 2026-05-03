@@ -311,7 +311,7 @@ export function AdminBookingsPage() {
   const [error,    setError]    = useState("");
   const [success,  setSuccess]  = useState("");
 
-  const { data: bookingsData, loading: bLoading } = usePolling(() => api.get("/bookings"), 1000);
+  const { data: bookingsData, loading: bLoading } = usePolling(() => api.get("/bookings"), 600000);
   useEffect(() => {
     if (bookingsData) { setBookings(bookingsData); setLoading(false); }
   }, [bookingsData]);
