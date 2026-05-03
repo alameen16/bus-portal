@@ -209,7 +209,7 @@ export function DriversPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="bg-stone-50 border-b border-stone-100">
-              {["Driver", "License", "Bus", "Route", "Trips", "Rating", "Status", "Actions"].map(h =>
+              {["Driver", "License", "Bus", "Route", "Trips", "Status", "Actions"].map(h =>
                 <th key={h} className="text-left px-5 py-3 text-xs font-bold text-stone-500 uppercase tracking-wider">{h}</th>)}
             </tr></thead>
             <tbody>
