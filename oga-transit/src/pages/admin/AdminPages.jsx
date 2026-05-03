@@ -104,7 +104,6 @@ export function BusesPage() {
               <div className="flex justify-between"><span className="text-stone-400">Capacity</span><span className="font-semibold">{bus.capacity} seats</span></div>
               <div className="flex justify-between"><span className="text-stone-400">Route</span><span className="font-semibold text-right text-xs">{bus.route ? `${bus.route.from} → ${bus.route.to}` : <span className="text-red-400">Unassigned</span>}</span></div>
               <div className="flex justify-between"><span className="text-stone-400">Driver</span><span className="font-semibold">{bus.driver?.name || <span className="text-red-400">None</span>}</span></div>
-              <div className="flex justify-between"><span className="text-stone-400">Next Service</span><span className="font-semibold text-xs">{bus.nextMaintenance || "—"}</span></div>
             </div>
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => { setEditBus(bus); setShowForm(true); }} className="text-xs text-blue-600 font-semibold border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-50">Edit</button>
@@ -226,7 +225,6 @@ export function DriversPage() {
                   <td className="px-5 py-4 text-xs text-stone-600">{d.bus?.plateNumber || <span className="text-red-400">None</span>}</td>
                   <td className="px-5 py-4 text-xs text-stone-600">{d.route ? `${d.route.from} → ${d.route.to}` : <span className="text-red-400">None</span>}</td>
                   <td className="px-5 py-4 font-semibold">{d.totalTrips}</td>
-                  <td className="px-5 py-4"><span className="text-amber-500">★</span> {d.rating}</td>
                   <td className="px-5 py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${statusColor[d.status]}`}>{d.status}</span></td>
                   <td className="px-5 py-4">
                     <div className="flex gap-2 flex-wrap">

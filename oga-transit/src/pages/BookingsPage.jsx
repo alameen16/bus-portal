@@ -523,11 +523,6 @@ function BookingSummary({ route, schedule, selectedSeats, user, onConfirm, loadi
         )}
       </div>
 
-      <div className="flex items-center justify-between mb-5 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-        <span className="text-green-700 text-sm font-semibold">Staff Shuttle</span>
-        <span className="text-green-700 font-black text-lg">FREE</span>
-      </div>
-
       <Button
         fullWidth
         onClick={onConfirm}
