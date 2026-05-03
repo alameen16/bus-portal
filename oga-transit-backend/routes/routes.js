@@ -95,26 +95,22 @@ router.get("/:id", verifyToken, async (req, res) => {
 /* ── CREATE ROUTE ── */
 router.post("/", verifyToken, requireRole(ADMIN_ROLES), async (req, res) => {
   try {
-    const { from, to, fromTerminal, toTerminal, price, duration, departures, stops, busId, driverId, distance } = req.body;
+    const { from, to, departures, stops, busId, driverId } = req.body;
 
-    if (!from || !to || !price || !duration)
-      return res.status(400).json({ message: "from, to, price, and duration are required." });
+    if (!from || !to)
+      return res.status(400).json({ message: "From and To cities are required." });
 
     const newRouteId = `rt-${uuidv4().slice(0, 6)}`;
 
     const newRoute = await Route.create({
-      id:           newRouteId,
-      from, to,
-      fromTerminal: fromTerminal || "",
-      toTerminal:   toTerminal   || "",
-      price:        Number(price),
-      duration,
-      departures:   departures || [],
-      stops:        stops      || [],
-      distance:     distance   || "",
-      busId:        busId      || null,
-      driverId:     driverId   || null,
-      status:       "active",
+      id:         newRouteId,
+      from,
+      to,
+      departures: departures || [],
+      stops:      stops      || [],
+      busId:      busId      || null,
+      driverId:   driverId   || null,
+      status:     "active",
     });
 
     // Sync driver assignment
@@ -174,7 +170,6 @@ router.put("/:id", verifyToken, requireRole(ADMIN_ROLES), async (req, res) => {
       );
     }
 
-    // Use findOneAndUpdate to ensure all fields are saved correctly
     const updatedRoute = await Route.findOneAndUpdate(
       { id: req.params.id },
       { ...req.body, id: req.params.id },

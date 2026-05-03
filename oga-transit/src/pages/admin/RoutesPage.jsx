@@ -1,12 +1,5 @@
 /**
  * pages/admin/RoutesPage.jsx — Manage Bus Routes
- *
- * Features:
- *   - List all routes with status, bus, driver
- *   - Create new route (modal form)
- *   - Edit existing route
- *   - Activate / Deactivate route
- *   - Delete route (superadmin only)
  */
 
 import { useState, useEffect } from "react";
@@ -20,7 +13,7 @@ export default function RoutesPage() {
   const [drivers,   setDrivers]   = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [showForm,  setShowForm]  = useState(false);
-  const [editRoute, setEditRoute] = useState(null); // null = create new
+  const [editRoute, setEditRoute] = useState(null);
   const [error,     setError]     = useState("");
   const [success,   setSuccess]   = useState("");
 
@@ -65,39 +58,33 @@ export default function RoutesPage() {
     setTimeout(() => setSuccess(""), 3000);
   }
 
-  function openCreate() { setEditRoute(null); setShowForm(true); }
-  function openEdit(r)  { setEditRoute(r);    setShowForm(true); }
-
   if (loading) return <Spinner />;
 
   return (
     <div className="space-y-5">
 
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-black text-stone-900 text-xl">Bus Routes</h2>
           <p className="text-stone-500 text-sm">{routes.length} routes total</p>
         </div>
         <button
-          onClick={openCreate}
+          onClick={() => { setEditRoute(null); setShowForm(true); }}
           className="bg-green-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-green-800 transition-colors"
         >
           + New Route
         </button>
       </div>
 
-      {/* Alerts */}
       {error   && <Alert type="error"   message={error}   onClose={() => setError("")} />}
       {success && <Alert type="success" message={success} onClose={() => setSuccess("")} />}
 
-      {/* Routes Table */}
       <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-stone-50 border-b border-stone-100">
-                {["Route", "Price", "Departures", "Bus", "Driver", "Status", "Actions"].map(h => (
+                {["Route", "Departures", "Bus", "Driver", "Status", "Actions"].map(h => (
                   <th key={h} className="text-left px-5 py-3 text-xs font-bold text-stone-500 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -107,18 +94,18 @@ export default function RoutesPage() {
                 <tr key={route.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
                   <td className="px-5 py-4">
                     <p className="font-bold text-stone-900">{route.from} → {route.to}</p>
-                    <p className="text-xs text-stone-400">{route.distance} · {route.duration}</p>
                   </td>
-                  <td className="px-5 py-4 font-bold text-green-700">₦{route.price?.toLocaleString()}</td>
                   <td className="px-5 py-4 text-stone-500 text-xs">{route.departures?.join(", ") || "—"}</td>
                   <td className="px-5 py-4 text-stone-600 text-xs">{route.bus?.plateNumber || <span className="text-red-400">Unassigned</span>}</td>
                   <td className="px-5 py-4 text-stone-600 text-xs">{route.driver?.name    || <span className="text-red-400">Unassigned</span>}</td>
                   <td className="px-5 py-4">
-                    <StatusBadge status={route.status} />
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${
+                      route.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
+                    }`}>{route.status}</span>
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex gap-2">
-                      <button onClick={() => openEdit(route)}        className="text-xs text-blue-600 font-semibold hover:underline">Edit</button>
+                      <button onClick={() => { setEditRoute(route); setShowForm(true); }} className="text-xs text-blue-600 font-semibold hover:underline">Edit</button>
                       <button onClick={() => toggleStatus(route.id)} className="text-xs text-amber-600 font-semibold hover:underline">
                         {route.status === "active" ? "Deactivate" : "Activate"}
                       </button>
@@ -134,36 +121,33 @@ export default function RoutesPage() {
         </div>
       </div>
 
-      {/* Create / Edit Modal */}
       {showForm && (
         <RouteFormModal
           route={editRoute}
           buses={buses}
           drivers={drivers}
           onClose={() => setShowForm(false)}
-          onSaved={() => { setShowForm(false); loadAll(); showSuccess(editRoute ? "Route updated." : "Route created."); }}
+          onSaved={() => {
+            setShowForm(false);
+            loadAll();
+            showSuccess(editRoute ? "Route updated." : "Route created.");
+          }}
         />
       )}
-
     </div>
   );
 }
 
-/* ── Route Create/Edit Form Modal ── */
+/* ── Route Form Modal ── */
 function RouteFormModal({ route, buses, drivers, onClose, onSaved }) {
   const isEdit = !!route;
   const [form, setForm] = useState({
-    from:          route?.from          || "",
-    to:            route?.to            || "",
-    fromTerminal:  route?.fromTerminal  || "",
-    toTerminal:    route?.toTerminal    || "",
-    price:         route?.price         || "",
-    duration:      route?.duration      || "",
-    distance:      route?.distance      || "",
-    departures:    route?.departures?.join(", ") || "",
-    stops:         route?.stops?.join(", ")      || "",
-    busId:         route?.busId         || "",
-    driverId:      route?.driverId      || "",
+    from:       route?.from                      || "",
+    to:         route?.to                        || "",
+    departures: route?.departures?.join(", ")    || "",
+    stops:      route?.stops?.join(", ")         || "",
+    busId:      route?.busId                     || "",
+    driverId:   route?.driverId                  || "",
   });
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
@@ -173,22 +157,23 @@ function RouteFormModal({ route, buses, drivers, onClose, onSaved }) {
   }
 
   async function save() {
+    if (!form.from.trim() || !form.to.trim()) {
+      setError("From and To cities are required.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
       const payload = {
-        ...form,
-        price:      Number(form.price),
+        from:       form.from.trim(),
+        to:         form.to.trim(),
         departures: form.departures.split(",").map(s => s.trim()).filter(Boolean),
         stops:      form.stops.split(",").map(s => s.trim()).filter(Boolean),
         busId:      form.busId    || null,
         driverId:   form.driverId || null,
       };
-      if (isEdit) {
-        await api.put(`/routes/${route.id}`, payload);
-      } else {
-        await api.post("/routes", payload);
-      }
+      if (isEdit) await api.put(`/routes/${route.id}`, payload);
+      else        await api.post("/routes", payload);
       onSaved();
     } catch (err) {
       setError(err.message);
@@ -201,18 +186,14 @@ function RouteFormModal({ route, buses, drivers, onClose, onSaved }) {
     <Modal title={isEdit ? "Edit Route" : "Create New Route"} onClose={onClose}>
       {error && <Alert type="error" message={error} onClose={() => setError("")} />}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="From City"       value={form.from}         onChange={v => update("from", v)} />
-        <Field label="To City"         value={form.to}           onChange={v => update("to", v)} />
-        <Field label="From Terminal"   value={form.fromTerminal}  onChange={v => update("fromTerminal", v)} />
-        <Field label="To Terminal"     value={form.toTerminal}    onChange={v => update("toTerminal", v)} />
-        <Field label="Price (₦)"       value={form.price}         onChange={v => update("price", v)} type="number" />
-        <Field label="Duration"        value={form.duration}      onChange={v => update("duration", v)} placeholder="e.g. 6h 15m" />
-        <Field label="Distance"        value={form.distance}      onChange={v => update("distance", v)} placeholder="e.g. 755km" />
-        <Field label="Departures (comma separated)" value={form.departures} onChange={v => update("departures", v)} placeholder="06:00, 09:00, 12:00" />
-        <Field label="Stops (comma separated)" value={form.stops} onChange={v => update("stops", v)} placeholder="e.g. Ore, Lokoja" />
+        <Field label="From City" value={form.from} onChange={v => update("from", v)} placeholder="e.g. Victoria Island" />
+        <Field label="To City"   value={form.to}   onChange={v => update("to", v)}   placeholder="e.g. Abule-Egba" />
+        <Field label="Departures (comma separated)" value={form.departures} onChange={v => update("departures", v)} placeholder="e.g. 07:00, 12:00, 17:00" />
+        <Field label="Stops (comma separated)"      value={form.stops}      onChange={v => update("stops", v)}      placeholder="e.g. Obalende, Yaba" />
         <div>
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Assign Bus</label>
-          <select value={form.busId} onChange={e => update("busId", e.target.value)} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:outline-none focus:border-green-500">
+          <select value={form.busId} onChange={e => update("busId", e.target.value)}
+            className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:outline-none focus:border-green-500">
             <option value="">— None —</option>
             {buses.filter(b => b.status === "active").map(b => (
               <option key={b.id} value={b.id}>{b.plateNumber} ({b.model})</option>
@@ -221,7 +202,8 @@ function RouteFormModal({ route, buses, drivers, onClose, onSaved }) {
         </div>
         <div>
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Assign Driver</label>
-          <select value={form.driverId} onChange={e => update("driverId", e.target.value)} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:outline-none focus:border-green-500">
+          <select value={form.driverId} onChange={e => update("driverId", e.target.value)}
+            className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:outline-none focus:border-green-500">
             <option value="">— None —</option>
             {drivers.map(d => (
               <option key={d.id} value={d.id}>{d.name}</option>
@@ -239,17 +221,8 @@ function RouteFormModal({ route, buses, drivers, onClose, onSaved }) {
   );
 }
 
-// ── Shared small components ──
 function Spinner() {
   return <div className="flex justify-center py-20"><div className="text-4xl animate-bounce">🚌</div></div>;
-}
-
-function StatusBadge({ status }) {
-  return (
-    <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${
-      status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
-    }`}>{status}</span>
-  );
 }
 
 function Alert({ type, message, onClose }) {
