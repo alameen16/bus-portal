@@ -1,5 +1,5 @@
 /**
- * pages/admin/BusesPage.jsx — Fleet Management
+ * pages/admin/AdminPages.jsx — Admin Pages (Buses, Drivers, Bookings, Staff)
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -252,6 +252,7 @@ export function DriversPage() {
     </div>
   );
 }
+
 function DriverForm({ driver, onSaved, onClose }) {
   const [form, setForm] = useState({
     name:             driver?.name             || "",
@@ -264,78 +265,42 @@ function DriverForm({ driver, onSaved, onClose }) {
   });
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
-
   const upd = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   async function save() {
-    // Password is required only when creating a new driver
-    if (!driver && !form.password) {
-      setError("A login password is required for new drivers.");
-      return;
-    }
-
+    if (!driver && !form.password) { setError("A login password is required for new drivers."); return; }
     setSaving(true);
     try {
-      if (driver) {
-        // Don't send password on update
-        const { password, ...updates } = form;
-        await api.put(`/drivers/${driver.id}`, updates);
-      } else {
-        await api.post("/drivers", form);
-      }
+      if (driver) { const { password, ...updates } = form; await api.put(`/drivers/${driver.id}`, updates); }
+      else        { await api.post("/drivers", form); }
       onSaved();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (e) { setError(e.message); }
+    finally { setSaving(false); }
   }
 
   return (
     <div className="space-y-4">
       {error && <Alert type="error" message={error} onClose={() => setError("")} />}
-
       <Field label="Full Name"         value={form.name}             onChange={v => upd("name", v)} />
       <Field label="Email"             value={form.email}            onChange={v => upd("email", v)} type="email" />
       <Field label="Phone"             value={form.phone}            onChange={v => upd("phone", v)} />
       <Field label="License Number"    value={form.licenseNumber}    onChange={v => upd("licenseNumber", v)} />
       <Field label="License Expiry"    value={form.licenseExpiry}    onChange={v => upd("licenseExpiry", v)} type="date" />
       <Field label="Emergency Contact" value={form.emergencyContact} onChange={v => upd("emergencyContact", v)} placeholder="Name - Phone" />
-
-      {/* Password only shown when adding a new driver */}
       {!driver && (
         <div>
-          <Field
-            label="Login Password"
-            value={form.password}
-            onChange={v => upd("password", v)}
-            type="password"
-            placeholder="Driver will use this to log in"
-          />
-          <p className="text-xs text-stone-400 mt-1 ml-1">
-            Share this password with the driver after creation.
-          </p>
+          <Field label="Login Password" value={form.password} onChange={v => upd("password", v)} type="password" placeholder="Driver will use this to log in" />
+          <p className="text-xs text-stone-400 mt-1 ml-1">Share this password with the driver after creation.</p>
         </div>
       )}
-
       <div className="flex justify-end gap-3 pt-2">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 text-sm font-semibold text-stone-600 border border-stone-200 rounded-lg hover:bg-stone-50"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={save}
-          disabled={saving}
-          className="px-4 py-2 text-sm font-bold text-white bg-green-700 rounded-lg hover:bg-green-800 disabled:opacity-60"
-        >
-          {saving ? "Saving..." : driver ? "Update Driver" : "Add Driver"}
-        </button>
+        <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-stone-600 border border-stone-200 rounded-lg hover:bg-stone-50">Cancel</button>
+        <button onClick={save} disabled={saving} className="px-4 py-2 text-sm font-bold text-white bg-green-700 rounded-lg hover:bg-green-800 disabled:opacity-60">{saving ? "Saving..." : driver ? "Update Driver" : "Add Driver"}</button>
       </div>
     </div>
   );
 }
+
 /* ══════════════════════════════════════
    BOOKINGS PAGE
 ══════════════════════════════════════ */
@@ -376,7 +341,6 @@ export function AdminBookingsPage() {
       {error   && <Alert type="error"   message={error}   onClose={() => setError("")} />}
       {success && <Alert type="success" message={success} onClose={() => setSuccess("")} />}
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search passenger or ref..." className="border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-green-500 flex-1 min-w-48" />
         {["all","confirmed","pending","cancelled","refunded"].map(s => (
@@ -419,28 +383,17 @@ export function AdminBookingsPage() {
   );
 }
 
-
-function StatBox({ label, value, color, small }) {
-  const colors = { green: "bg-green-50 text-green-700 border-green-100", blue: "bg-blue-50 text-blue-700 border-blue-100", amber: "bg-amber-50 text-amber-700 border-amber-100", purple: "bg-purple-50 text-purple-700 border-purple-100" };
-  return (
-    <div className={`rounded-2xl border p-5 ${colors[color]}`}>
-      <p className={`font-black ${small ? "text-base" : "text-2xl"} mb-1`}>{value}</p>
-      <p className="font-semibold text-sm opacity-80">{label}</p>
-    </div>
-  );
-}
-
-
 /* ══════════════════════════════════════
    STAFF PAGE
 ══════════════════════════════════════ */
 export function StaffPage() {
-  const [staff,    setStaff]    = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [showForm,  setShowForm]  = useState(false);
-  const [editStaff, setEditStaff] = useState(null); // null = add mode, object = edit mode
-  const [error,     setError]     = useState("");
-  const [success,   setSuccess]   = useState("");
+  const [staff,       setStaff]       = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [showForm,    setShowForm]    = useState(false);
+  const [showImport,  setShowImport]  = useState(false);
+  const [editStaff,   setEditStaff]   = useState(null);
+  const [error,       setError]       = useState("");
+  const [success,     setSuccess]     = useState("");
 
   useEffect(() => { load(); }, []);
   async function load() {
@@ -471,7 +424,7 @@ export function StaffPage() {
   const ROLE_CONFIG = {
     superadmin: { label: "Super Admin", color: "bg-purple-100 text-purple-700" },
     localAdmin:  { label: "Local Admin", color: "bg-blue-100 text-blue-700" },
-    staff:       { label: "Staff — public site only", color: "bg-green-100 text-green-700" },
+    staff:       { label: "Staff", color: "bg-green-100 text-green-700" },
   };
 
   if (loading) return <Spinner />;
@@ -479,9 +432,26 @@ export function StaffPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div><h2 className="font-black text-stone-900 text-xl">Staff Management</h2><p className="text-stone-500 text-sm">{staff.length} admin users</p></div>
-        <button onClick={() => { setEditStaff(null); setShowForm(true); }} className="bg-green-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-green-800">+ Add Staff</button>
+        <div>
+          <h2 className="font-black text-stone-900 text-xl">Staff Management</h2>
+          <p className="text-stone-500 text-sm">{staff.length} staff members</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="border border-green-600 text-green-700 text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-green-50 transition-colors"
+          >
+            Import CSV
+          </button>
+          <button
+            onClick={() => { setEditStaff(null); setShowForm(true); }}
+            className="bg-green-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-green-800"
+          >
+            + Add Staff
+          </button>
+        </div>
       </div>
+
       {error   && <Alert type="error"   message={error}   onClose={() => setError("")} />}
       {success && <Alert type="success" message={success} onClose={() => setSuccess("")} />}
 
@@ -508,12 +478,7 @@ export function StaffPage() {
                 <option value="localAdmin">Local Admin</option>
                 <option value="staff">Staff</option>
               </select>
-              <button
-                onClick={() => { setEditStaff(s); setShowForm(true); }}
-                className="text-xs font-semibold text-blue-600 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-50"
-              >
-                Edit
-              </button>
+              <button onClick={() => { setEditStaff(s); setShowForm(true); }} className="text-xs font-semibold text-blue-600 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-50">Edit</button>
               <button onClick={() => toggleStatus(s.id, s.status)} className={`text-xs font-semibold px-2.5 py-1 rounded-lg border ${s.status === "active" ? "text-amber-600 border-amber-200 hover:bg-amber-50" : "text-green-600 border-green-200 hover:bg-green-50"}`}>
                 {s.status === "active" ? "Suspend" : "Activate"}
               </button>
@@ -530,13 +495,17 @@ export function StaffPage() {
         >
           <AddStaffForm
             staff={editStaff}
-            onSaved={() => {
-              setShowForm(false);
-              setEditStaff(null);
-              load();
-              flash(editStaff ? "Staff member updated." : "Staff member added.");
-            }}
+            onSaved={() => { setShowForm(false); setEditStaff(null); load(); flash(editStaff ? "Staff member updated." : "Staff member added."); }}
             onClose={() => { setShowForm(false); setEditStaff(null); }}
+          />
+        </Modal>
+      )}
+
+      {showImport && (
+        <Modal title="Import Staff from CSV" onClose={() => setShowImport(false)}>
+          <ImportStaffForm
+            onImported={(msg) => { setShowImport(false); load(); flash(msg); }}
+            onClose={() => setShowImport(false)}
           />
         </Modal>
       )}
@@ -544,33 +513,27 @@ export function StaffPage() {
   );
 }
 
+/* ── ADD / EDIT STAFF FORM ── */
 function AddStaffForm({ staff: existingStaff, onSaved, onClose }) {
   const isEdit = !!existingStaff;
-
   const [form, setForm] = useState({
     name:     existingStaff?.name  || "",
     email:    existingStaff?.email || "",
     phone:    existingStaff?.phone || "",
-    role:     existingStaff?.role  || "localAdmin",
-    password: "", // password blank in edit mode — only fill if changing
+    role:     existingStaff?.role  || "staff",
+    password: "",
   });
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
   const upd = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   function validate() {
-    if (!form.name.trim())          return "Full name is required.";
-    if (!form.email.trim())         return "Email address is required.";
-    if (!form.email.includes("@"))  return "Enter a valid email address.";
-    // Password only required when adding a new staff member
-    if (!isEdit) {
-      if (!form.password.trim())    return "Password is required.";
-      if (form.password.length < 6) return "Password must be at least 6 characters.";
-    }
-    // If editing and password is filled, validate it
-    if (isEdit && form.password && form.password.length < 6) {
-      return "New password must be at least 6 characters.";
-    }
+    if (!form.name.trim())         return "Full name is required.";
+    if (!form.email.trim())        return "Email address is required.";
+    if (!form.email.includes("@")) return "Enter a valid email address.";
+    if (!isEdit && !form.password.trim())    return "Password is required.";
+    if (!isEdit && form.password.length < 6) return "Password must be at least 6 characters.";
+    if (isEdit && form.password && form.password.length < 6) return "New password must be at least 6 characters.";
     return null;
   }
 
@@ -581,7 +544,6 @@ function AddStaffForm({ staff: existingStaff, onSaved, onClose }) {
     setError("");
     try {
       if (isEdit) {
-        // In edit mode — only send password if user typed a new one
         const payload = { name: form.name, email: form.email, phone: form.phone, role: form.role };
         if (form.password.trim()) payload.password = form.password;
         await api.put(`/staff/${existingStaff.id}`, payload);
@@ -590,7 +552,7 @@ function AddStaffForm({ staff: existingStaff, onSaved, onClose }) {
       }
       onSaved();
     } catch (e) {
-      setError(e.message || `Failed to ${isEdit ? "update" : "add"} staff. Please try again.`);
+      setError(e.message || `Failed to ${isEdit ? "update" : "add"} staff.`);
     } finally {
       setSaving(false);
     }
@@ -599,21 +561,139 @@ function AddStaffForm({ staff: existingStaff, onSaved, onClose }) {
   return (
     <div className="space-y-4">
       {error && <Alert type="error" message={error} onClose={() => setError("")} />}
-      <Field label="Full Name" value={form.name}  onChange={v => upd("name", v)} placeholder="e.g. Emeka Okafor" />
-      <Field label="Email"     value={form.email} onChange={v => upd("email", v)} type="email" placeholder="staff@ogatransit.ng" />
-      <Field label="Phone"     value={form.phone} onChange={v => upd("phone", v)} />
+      <Field label="Full Name" value={form.name}     onChange={v => upd("name", v)}     placeholder="e.g. Emeka Okafor" />
+      <Field label="Email"     value={form.email}    onChange={v => upd("email", v)}    type="email" placeholder="staff@company.ng" />
+      <Field label="Phone"     value={form.phone}    onChange={v => upd("phone", v)} />
       <Field label="Password"  value={form.password} onChange={v => upd("password", v)} type="password" placeholder="Min 6 characters" />
       <div>
         <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Role</label>
         <select value={form.role} onChange={e => upd("role", e.target.value)} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:outline-none focus:border-green-500">
-          <option value="staff">Staff — public site, book & view own bookings</option>
+          <option value="staff">Staff — book & view own bookings</option>
           <option value="localAdmin">Local Admin — manage routes, buses, drivers, bookings</option>
           <option value="superadmin">Super Admin — full system access</option>
         </select>
       </div>
       <div className="flex justify-end gap-3 pt-2">
         <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-stone-600 border border-stone-200 rounded-lg hover:bg-stone-50">Cancel</button>
-        <button onClick={save} disabled={saving} className="px-4 py-2 text-sm font-bold text-white bg-green-700 rounded-lg hover:bg-green-800 disabled:opacity-60">{saving ? "Adding..." : "Add Staff"}</button>
+        <button onClick={save} disabled={saving} className="px-4 py-2 text-sm font-bold text-white bg-green-700 rounded-lg hover:bg-green-800 disabled:opacity-60">
+          {saving ? "Saving..." : isEdit ? "Update Staff" : "Add Staff"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── IMPORT STAFF FORM ── */
+function ImportStaffForm({ onImported, onClose }) {
+  const [importing, setImporting] = useState(false);
+  const [error,     setError]     = useState("");
+  const [preview,   setPreview]   = useState([]);
+  const [fileName,  setFileName]  = useState("");
+
+  function parseCSV(text) {
+    const lines = text.trim().split("\n");
+    const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+    return lines.slice(1).map(line => {
+      const values = line.split(",").map(v => v.trim());
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = values[i] || ""; });
+      return obj;
+    }).filter(row => row.name || row.email);
+  }
+
+  function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = parseCSV(ev.target.result);
+        setPreview(parsed);
+        setError("");
+      } catch {
+        setError("Could not parse CSV. Make sure it has name, email, phone, role columns.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function handleImport() {
+    if (preview.length === 0) { setError("No data to import."); return; }
+    setImporting(true);
+    setError("");
+    try {
+      const result = await api.post("/staff/bulk", { staff: preview });
+      onImported(result.message);
+    } catch (e) {
+      setError(e.message || "Import failed.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function downloadTemplate() {
+    const csv = "name,email,phone,role\nJohn Doe,john@company.com,08012345678,staff\nJane Smith,jane@company.com,08098765432,staff";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
+    a.download = "staff_import_template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="space-y-4">
+      {error && <Alert type="error" message={error} onClose={() => setError("")} />}
+
+      <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 text-sm text-stone-600">
+        <p className="font-semibold text-stone-800 mb-1">CSV Format Required</p>
+        <p className="text-xs text-stone-500 mb-3">Your CSV must have these columns: <span className="font-mono bg-white px-1 rounded">name, email, phone, role</span></p>
+        <p className="text-xs text-stone-500 mb-3">All imported staff will have <span className="font-semibold text-stone-700">password</span> as their default password. They can change it after logging in.</p>
+        <button onClick={downloadTemplate} className="text-xs text-green-700 font-bold underline">
+          Download CSV template
+        </button>
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Upload CSV File</label>
+        <input
+          type="file"
+          accept=".csv"
+          onChange={handleFile}
+          className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:outline-none focus:border-green-500"
+        />
+        {fileName && <p className="text-xs text-stone-400 mt-1">{fileName} — {preview.length} rows found</p>}
+      </div>
+
+      {preview.length > 0 && (
+        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+          <p className="text-xs font-bold text-stone-500 uppercase tracking-wider px-4 py-2 bg-stone-50 border-b border-stone-100">Preview ({preview.length} staff)</p>
+          <div className="max-h-48 overflow-y-auto">
+            {preview.slice(0, 10).map((row, i) => (
+              <div key={i} className="flex items-center justify-between px-4 py-2 border-b border-stone-50 last:border-0 text-sm">
+                <span className="font-semibold text-stone-800">{row.name}</span>
+                <span className="text-stone-400 text-xs">{row.email}</span>
+                <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-semibold">{row.role || "staff"}</span>
+              </div>
+            ))}
+            {preview.length > 10 && (
+              <p className="text-xs text-stone-400 text-center py-2">...and {preview.length - 10} more</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end gap-3 pt-2">
+        <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-stone-600 border border-stone-200 rounded-lg hover:bg-stone-50">Cancel</button>
+        <button
+          onClick={handleImport}
+          disabled={importing || preview.length === 0}
+          className="px-4 py-2 text-sm font-bold text-white bg-green-700 rounded-lg hover:bg-green-800 disabled:opacity-60"
+        >
+          {importing ? "Importing..." : `Import ${preview.length} Staff`}
+        </button>
       </div>
     </div>
   );

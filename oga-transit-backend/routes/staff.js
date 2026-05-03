@@ -62,6 +62,61 @@ router.post("/", verifyToken, requireRole(["superadmin"]), async (req, res) => {
   }
 });
 
+/* ── BULK IMPORT STAFF FROM CSV ── */
+router.post("/bulk", verifyToken, requireRole(["superadmin"]), async (req, res) => {
+  try {
+    const { staff } = req.body;
+
+    if (!Array.isArray(staff) || staff.length === 0)
+      return res.status(400).json({ message: "No staff data provided." });
+
+    const DEFAULT_PASSWORD = "password";
+    const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+
+    const results = { created: [], skipped: [], errors: [] };
+
+    for (const row of staff) {
+      const name  = row.name?.trim();
+      const email = row.email?.toLowerCase().trim();
+      const phone = row.phone?.trim() || "";
+      const role  = ["superadmin", "localAdmin", "staff"].includes(row.role?.trim())
+        ? row.role.trim()
+        : "staff";
+
+      if (!name || !email) {
+        results.errors.push({ row, reason: "Missing name or email" });
+        continue;
+      }
+
+      const exists = await User.findOne({ email });
+      if (exists) {
+        results.skipped.push(email);
+        continue;
+      }
+
+      await User.create({
+        id:       `u-${uuidv4().slice(0, 6)}`,
+        name,
+        email,
+        password: hashedPassword,
+        role,
+        phone,
+        avatar:   name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase(),
+        status:   "active",
+      });
+
+      results.created.push(email);
+    }
+
+    res.status(201).json({
+      message: `Import complete. ${results.created.length} created, ${results.skipped.length} skipped (already exist), ${results.errors.length} errors.`,
+      results,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Bulk import failed." });
+  }
+});
+
 /* ── UPDATE STAFF DETAILS ── */
 router.put("/:id", verifyToken, requireRole(["superadmin"]), async (req, res) => {
   try {
@@ -98,7 +153,6 @@ router.patch("/:id/role", verifyToken, requireRole(["superadmin"]), async (req, 
     const user = await User.findOne({ id: req.params.id });
     if (!user) return res.status(404).json({ message: "Staff not found." });
 
-    // Prevent removing the last superadmin
     if (user.role === "superadmin" && role !== "superadmin") {
       const superadminCount = await User.countDocuments({ role: "superadmin" });
       if (superadminCount === 1)
