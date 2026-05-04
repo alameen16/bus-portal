@@ -58,8 +58,8 @@ export default function LoginPage({ setCurrentPage }) {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-white font-black text-3xl tracking-widest mb-1">🚌 OGA TRANSIT</h1>
-          <p className="text-green-400 text-sm">Nigeria's Premium Bus Network</p>
+          <h1 className="text-white font-black text-3xl tracking-widest mb-1"></h1>
+          <p className="text-green-400 text-sm"></p>
         </div>
 
         {/* Login Card */}
