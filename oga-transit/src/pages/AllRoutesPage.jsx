@@ -214,7 +214,6 @@ function RouteCard({ route, onBook, similar }) {
         <h3 className="text-white font-black text-lg leading-tight mb-1">{route.from} → {route.to}</h3>
         <p className="text-white/55 text-xs mb-3">{route.duration} · {route.departures?.length} daily departures</p>
         <div className="flex items-center justify-between">
-          <span className="text-green-400 font-black text-xl">₦{route.price?.toLocaleString()}</span>
           <button
             onClick={(e) => { e.stopPropagation(); onBook(); }}
             className="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-green-500 transition-colors"

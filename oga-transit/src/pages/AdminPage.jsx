@@ -14,7 +14,6 @@
  */
 
 import { useState } from "react";
-import { FLEET } from "../data";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import StatusBadge from "../components/StatusBadge";
